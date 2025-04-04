@@ -1,0 +1,145 @@
+:root {
+  /* Brand colors */
+  --dark-red: #420015;
+  --red: #E4003D;
+  --light-red: #FF9594;
+  --dark-green: #004C00;
+  --green: #00B400;
+  --light-green: #7BF862;
+  --dark-blue: #04134A;
+  --blue: #0C679C;
+  --light-blue: #A1DCF4;
+  --dark-gray: #1A272C;
+  --gray: #616E73;
+  --light-gray: #E6E7E8;
+  --white: #F8F9FA;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.6;
+  color: var(--dark-gray);
+  background-color: var(--white);
+  padding: 20px;
+}
+
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+h1, h2 {
+  margin-bottom: 20px;
+  color: var(--dark-gray);
+}
+
+.editor-container {
+  margin-bottom: 30px;
+}
+
+#editor {
+  width: 100%;
+  height: 300px;
+  padding: 15px;
+  border: 1px solid var(--gray);
+  border-radius: 4px;
+  font-size: 16px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.timeline-container {
+  margin-top: 10px;
+  position: relative;
+}
+
+#timeline-tree {
+  position: relative;
+  overflow-x: hidden;
+  overflow-y: visible;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  min-height: 100px;
+  width: 100%;
+  box-sizing: border-box;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+}
+
+/* SVG Timeline Styles */
+#timeline-tree svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100px;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* Make nodes interactive */
+.node {
+  cursor: pointer;
+}
+
+/* Style for hit areas */
+.node-hit-area {
+  cursor: ew-resize;
+  pointer-events: all;
+}
+
+/* Prevent any SVG scaling */
+* {
+  transform-origin: 0 0 !important;
+}
+
+/* Remove hover scaling effect */
+#timeline-tree svg g[transform]:hover {
+  transform: none !important;
+}
+
+/* Prevent any hover effects */
+#timeline-tree * {
+  transition: none !important;
+}
+
+/* Ensure lines appear behind nodes */
+.branch-connections {
+  z-index: -1;
+}
+
+/* Tooltips removed */
+
+.keyboard-shortcuts {
+  margin-top: 20px;
+  font-size: 14px;
+  color: var(--gray);
+}
+
+.controls button {
+  background-color: var(--light-gray);
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  color: var(--dark-gray);
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.controls button:hover {
+  background-color: var(--gray);
+  color: var(--white);
+}
+
+.build-info {
+  margin-top: 20px;
+  font-size: 12px;
+  color: var(--gray);
+}
