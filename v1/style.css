@@ -96,17 +96,17 @@ h1, h2 {
 
 /* Prevent any SVG scaling */
 * {
-  transform-origin: 0 0 !important;
+  transform-origin: 0 0;
 }
 
 /* Remove hover scaling effect */
-#timeline-tree svg g[transform]:hover {
-  transform: none !important;
-}
+/* #timeline-tree svg g[transform]:hover {
+  transform: none;
+} */
 
 /* Prevent any hover effects */
 #timeline-tree * {
-  transition: none !important;
+  transition: none;
 }
 
 /* Branch connection styling */

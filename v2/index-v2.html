@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Version Control</title>
+    <link rel="stylesheet" href="style-v2.css">
+</head>
+<body>
+    <div class="container">
+        <div class="editor-container">
+            <textarea id="editor" placeholder="Start typing here..."></textarea>
+        </div>
+        <div class="timeline-container">
+            <div id="timeline-tree"></div>
+        </div>
+        <div class="raw-storage-container">
+            <h3>Raw Storage Content:</h3>
+            <pre id="raw-storage-display"></pre>
+        </div>
+    </div>
+    <script src="config-v2.js"></script>
+    <script type="module" src="/v2/app-v2.js"></script>
+</body>
+</html>
