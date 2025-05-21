@@ -109,9 +109,11 @@ h1, h2 {
   transition: none !important;
 }
 
-/* Ensure lines appear behind nodes */
+/* Branch connection styling */
 .branch-connections {
-  z-index: -1;
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
 }
 
 /* Tooltips removed */

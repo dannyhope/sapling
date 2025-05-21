@@ -532,12 +532,27 @@ class VersionControl {
   renderBranchConnections(parentGroup) {
     const svgNS = "http://www.w3.org/2000/svg";
     
-    // Create a group for all connections
+    // Remove any existing connections first
+    const existingConnections = parentGroup.querySelector('.branch-connections');
+    if (existingConnections) {
+      parentGroup.removeChild(existingConnections);
+    }
+    
+    // Create a new group for all connections
     const connectionsGroup = document.createElementNS(svgNS, "g");
     connectionsGroup.setAttribute("class", "branch-connections");
     parentGroup.insertBefore(connectionsGroup, parentGroup.firstChild); // Add to back
     
-    // For each branch (except main), create a connection to its parent
+    // Draw debug rectangle to make sure the connections group is visible
+    const debugRect = document.createElementNS(svgNS, "rect");
+    debugRect.setAttribute("x", 0);
+    debugRect.setAttribute("y", 0);
+    debugRect.setAttribute("width", 5);
+    debugRect.setAttribute("height", 5);
+    debugRect.setAttribute("fill", "red");
+    connectionsGroup.appendChild(debugRect);
+    
+    // Process each branch except main
     Object.keys(this.branches).forEach(branchId => {
       if (branchId === 'main') return; // Skip main branch
       
@@ -547,33 +562,64 @@ class VersionControl {
       const parentBranchId = branch.parentVersion.branchId;
       const parentVersionIndex = branch.parentVersion.versionIndex;
       
-      // Get parent node position
-      const parentNodeKey = `${parentBranchId}-${parentVersionIndex}`;
-      const parentPos = this.nodePositions[parentNodeKey];
-      
-      // Get first node of child branch
-      let childNodeKey = null;
+      // Find the first visible node in this branch
+      let childNodeIndex = -1;
       for (let i = 0; i < branch.versions.length; i++) {
         if (branch.versions[i].type === 'keypress' || branch.versions[i].type === 'deletion') {
-          childNodeKey = `${branchId}-${i}`;
+          childNodeIndex = i;
           break;
         }
       }
       
-      if (!parentPos || !childNodeKey || !this.nodePositions[childNodeKey]) return;
+      if (childNodeIndex === -1) return; // No visible nodes in this branch
       
-      const childPos = this.nodePositions[childNodeKey];
+      // Get parent and child positions
+      const parentKey = `${parentBranchId}-${parentVersionIndex}`;
+      const childKey = `${branchId}-${childNodeIndex}`;
       
-      // Create vertical connection line
-      const connection = document.createElementNS(svgNS, "line");
-      connection.setAttribute("x1", parentPos.x + 1); // Center of parent node
-      connection.setAttribute("y1", parentPos.y);
-      connection.setAttribute("x2", parentPos.x + 1); // Keep same x for vertical line
-      connection.setAttribute("y2", childPos.y);
-      connection.setAttribute("stroke", "rgba(0,0,0,0.5)"); // More transparent for connections
-      connection.setAttribute("stroke-width", "0.4");
+      // Validate positions exist
+      if (!this.nodePositions[parentKey] || !this.nodePositions[childKey]) {
+        console.warn(`Missing positions for branch connection: ${parentKey} -> ${childKey}`);
+        return;
+      }
       
-      connectionsGroup.appendChild(connection);
+      const parentPos = this.nodePositions[parentKey];
+      const childPos = this.nodePositions[childKey];
+      
+      // Draw a path for the connection
+      const path = document.createElementNS(svgNS, "path");
+      
+      // Calculate control points for a smooth curve
+      const midY = (parentPos.y + childPos.y) / 2;
+      const pathData = `M ${parentPos.x+1},${parentPos.y} ` + // Move to parent
+                     `L ${parentPos.x+1},${midY} ` +         // Vertical line to midpoint
+                     `L ${childPos.x},${childPos.y}`;        // Line to child
+      
+      path.setAttribute("d", pathData);
+      path.setAttribute("stroke", "#0C679C"); // Use blue for branches
+      path.setAttribute("stroke-width", "2"); // Make it thicker
+      path.setAttribute("fill", "none");
+      path.setAttribute("pointer-events", "none");
+      
+      // Add the path to the connections group
+      connectionsGroup.appendChild(path);
+      
+      // Create small circles at the junction points
+      const junctionPoint = document.createElementNS(svgNS, "circle");
+      junctionPoint.setAttribute("cx", parentPos.x+1);
+      junctionPoint.setAttribute("cy", midY);
+      junctionPoint.setAttribute("r", 2);
+      junctionPoint.setAttribute("fill", "#0C679C");
+      connectionsGroup.appendChild(junctionPoint);
+      
+      // Create a label for the branch
+      const label = document.createElementNS(svgNS, "text");
+      label.setAttribute("x", childPos.x + 3);
+      label.setAttribute("y", childPos.y - 5);
+      label.setAttribute("font-size", "8px");
+      label.setAttribute("fill", "#0C679C");
+      label.textContent = branchId.replace('branch-', '');
+      connectionsGroup.appendChild(label);
     });
   }
   
@@ -660,7 +706,7 @@ class VersionControl {
   
   loadUserPreferences() {
     try {
-      const prefs = JSON.parse(localStorage.getItem('versionControl'));
+      const prefs = JSON.parse(localStorage.getItem('textVersionControl'));
       if (prefs && this.branches[prefs.currentBranchId]) {
         const branch = this.branches[prefs.currentBranchId];
         if (branch.versions[prefs.currentVersionIndex]) {
