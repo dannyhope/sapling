@@ -18,13 +18,13 @@ This project is built using core web technologies with no external libraries or 
 
 - **HTML**: For the application structure.
     - V1 Entry Point: [/v1/index.html](mdc:v1/index.html)
-    - V2 Entry Point: [/v2/index-v2.html](mdc:v2/index-v2.html)
+    - V2 Entry Point: [/v2/index.html](mdc:v2/index.html)
 - **CSS**: For styling.
     - V1 Styles: [/v1/style.css](mdc:v1/style.css)
-    - V2 Styles: [/v2/style-v2.css](mdc:v2/style-v2.css)
+    - V2 Styles: [/v2/style.css](mdc:v2/style.css)
 - **JavaScript (Vanilla JS)**: For all client-side logic.
     - V1 Logic: Primarily in [/v1/app.js](mdc:v1/app.js)
-    - V2 Logic (Modularized): Main file [/v2/app-v2.js](mdc:v2/app-v2.js) and modules within the [/v2/js/](mdc:v2/js) directory:
+    - V2 Logic (Modularized): Main file [/v2/app.js](mdc:v2/app.js) and modules within the [/v2/js/](mdc:v2/js) directory:
         - [/v2/js/editorManager.js](mdc:v2/js/editorManager.js)
         - [/v2/js/timelineManager.js](mdc:v2/js/timelineManager.js)
         - [/v2/js/storageManager.js](mdc:v2/js/storageManager.js)
@@ -33,11 +33,11 @@ This project is built using core web technologies with no external libraries or 
         - [/v2/js/versionContentStore.js](mdc:v2/js/versionContentStore.js)
 - **Configuration**:
     - V1 Config: [/v1/config.js](mdc:v1/config.js)
-    - V2 Config: [/v2/config-v2.js](mdc:v2/config-v2.js)
+    - V2 Config: [/v2/config.js](mdc:v2/config.js)
 
 ## Core Functionality Focus (V2)
 
-Refer to [/v2/app-v2.js](mdc:v2/app-v2.js) for more detailed explanations of these features.
+Refer to [/v2/app.js](mdc:v2/app.js) for more detailed explanations of these features.
 
 - **Text Input Management**: Granular capture of single character typing and deletions.
 - **Version Creation**: Character-level history recording using `VersionContentStore`.
@@ -48,7 +48,7 @@ Refer to [/v2/app-v2.js](mdc:v2/app-v2.js) for more detailed explanations of the
 
 ## Architectural Principles (V2)
 
-- **Object-Oriented Design (OOP)**: Classes encapsulate responsibilities (e.g., `EditorManagerV2`, `TimelineManagerV2`, etc.).
+- **Object-Oriented Design (OOP)**: Classes encapsulate responsibilities (e.g., `EditorManager`, `TimelineManager`, etc.).
 - **Clear Separation of Concerns**: Each class has a well-defined role.
 - **Thorough Documentation**: JSDoc for all significant code elements.
 - **JavaScript Best Practices**: Strict mode, efficient DOM manipulation, robust error handling.
@@ -64,8 +64,8 @@ Refer to [/v2/app-v2.js](mdc:v2/app-v2.js) for more detailed explanations of the
 
 ## Modules and Imports (V2)
 
-- [/v2/app-v2.js](mdc:v2/app-v2.js) is the main V2 application file, importing modules from [/v2/js/](mdc:v2/js).
-- `VersionContentStore` is imported directly by `VersionControlV2`.
+- [/v2/app.js](mdc:v2/app.js) is the main V2 application file, importing modules from [/v2/js/](mdc:v2/js).
+- `VersionContentStore` is imported directly by `VersionControl`.
 - Manage circular dependencies carefully, often by setting dependent properties post-instantiation.
 
 ## Browser Compatibility

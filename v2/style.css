@@ -77,11 +77,11 @@ h1, h2 {
 
 /* SVG Timeline Styles */
 #timeline-tree svg {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100px;
+  /* position: absolute; */ /* Removed */
+  /* top: 0; */ /* Removed */
+  /* left: 0; */ /* Removed */
+  /* width: 100%; */ /* Removed */
+  height: 100px; /* Retain default height, will be overridden by JS */
   user-select: none;
 }
 
