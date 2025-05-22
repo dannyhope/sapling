@@ -65,6 +65,7 @@ export class EditorManager {
       // Fallback for complex changes (paste, multi-char input, replacements not yet covered)
       console.warn(`Detected complex change. Type: ${event.inputType}, lengths: ${currentContent.length}/${previousContent.length}`);
     }
+    this._previousContent = currentContent; // Update after processing
   }
   
   /**
@@ -112,6 +113,7 @@ export class EditorManager {
     const newContent = currentContent.substring(0, index) + currentContent.substring(index + 1);
     
     this.editorElement.value = newContent;
+    this._previousContent = newContent; // Update previous content
     this.editorElement.setSelectionRange(index, index);
     
     this.versionControl.recordCharacterDeletion(index, message);

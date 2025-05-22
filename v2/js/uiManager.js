@@ -8,8 +8,6 @@ export class UIManager {
   // Constants for DOM selectors, IDs, and classes
   static RAW_STORAGE_DISPLAY_ID = 'raw-storage-display';
   static CONTROL_BTN_CLASS = 'control-btn';
-  static EXPORT_BTN_ID = 'export-btn';
-  static IMPORT_BTN_ID = 'import-btn';
   static BRANCH_BTN_ID = 'branch-btn';
 
   // Constants for message types
@@ -27,12 +25,11 @@ export class UIManager {
   /**
    * Creates a UIManager instance.
    * @param {import('./versionControl.js').VersionControlV2} versionControl - Main version control instance.
-   * @param {import('./storageManager.js').StorageManager} storageManager - Storage manager instance.
+   * @param {null} storageManager - Storage manager instance (currently null as it's removed).
    * @param {import('./timelineManager.js').TimelineManagerV2} timelineManager - Timeline manager instance.
    */
   constructor(versionControl, storageManager, timelineManager) {
     this.versionControl = versionControl;
-    this.storageManager = storageManager;
     this.timelineManager = timelineManager;
     this.controlsContainer = null;
     this.rawStorageDisplayElement = null; // For caching the DOM element
@@ -123,12 +120,8 @@ export class UIManager {
       return;
     }
 
-    const exportBtn = this._createButton('Export History', UIManager.EXPORT_BTN_ID, this._handleExportClick.bind(this));
-    const importBtn = this._createButton('Import History', UIManager.IMPORT_BTN_ID, this._handleImportClick.bind(this));
     const branchBtn = this._createButton('New Branch', UIManager.BRANCH_BTN_ID, this._handleBranchClick.bind(this));
 
-    this.controlsContainer.appendChild(exportBtn);
-    this.controlsContainer.appendChild(importBtn);
     this.controlsContainer.appendChild(branchBtn);
   }
 
@@ -147,58 +140,6 @@ export class UIManager {
     button.classList.add(UIManager.CONTROL_BTN_CLASS);
     button.addEventListener('click', clickHandler);
     return button;
-  }
-
-  /**
-   * Handles the click event for the 'Export History' button.
-   * Retrieves all branch data from VersionControl and uses StorageManager to export it.
-   * @private
-   */
-  _handleExportClick() {
-    if (!this.versionControl || !this.storageManager || !this.storageManager.exportHistoryToFile) {
-      this.displayMessage('Export functionality is not available or properly configured.', UIManager.MESSAGE_TYPES.ERROR);
-      return;
-    }
-
-    try {
-      const data = this.versionControl.getAllBranchesData();
-      this.storageManager.exportHistoryToFile(data);
-      this.displayMessage('History exported successfully.', UIManager.MESSAGE_TYPES.SUCCESS);
-    } catch (error) {
-      console.error('Export failed:', error);
-      this.displayMessage(`Export failed: ${error.message}`, UIManager.MESSAGE_TYPES.ERROR);
-    }
-  }
-
-  /**
-   * Handles the click event for the 'Import History' button.
-   * Uses StorageManager to import data from a file and loads it into VersionControl.
-   * @private
-   */
-  async _handleImportClick() {
-    if (!this.storageManager || !this.storageManager.importHistoryFromFile || !this.versionControl || !this.versionControl.loadAllBranchesData) {
-      this.displayMessage('Import functionality is not available or properly configured.', UIManager.MESSAGE_TYPES.ERROR);
-      return;
-    }
-
-    try {
-      const importedData = await this.storageManager.importHistoryFromFile();
-      if (importedData) { // importHistoryFromFile should ideally throw an error or return null/undefined on failure/cancellation
-        this.versionControl.loadAllBranchesData(importedData);
-        this.displayMessage('History imported successfully.', UIManager.MESSAGE_TYPES.SUCCESS);
-        // It's crucial that after import, the UI (editor, timeline, etc.) is refreshed.
-        // This might involve calling methods on editorManager, timelineManager, or versionControl.
-        if (this.timelineManager && this.timelineManager.renderTimeline) {
-           this.timelineManager.renderTimeline();
-        }
-        this.updateVersionInfo(); // Basic update
-      } else {
-        this.displayMessage('Import was cancelled or failed to produce data.', UIManager.MESSAGE_TYPES.INFO);
-      }
-    } catch (error) {
-      console.error('Import failed:', error);
-      this.displayMessage(`Import failed: ${error.message}`, UIManager.MESSAGE_TYPES.ERROR);
-    }
   }
 
   /**

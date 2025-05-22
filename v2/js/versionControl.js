@@ -20,13 +20,13 @@ export class VersionControl {
    * Creates a VersionControl instance
    * @param {EditorManager} editorManager - Editor manager instance
    * @param {TimelineManager} timelineManager - Timeline manager instance
-   * @param {StorageManager} storageManager - Storage manager instance
+   * @param {null} storageManager - Storage manager instance (currently null as it's removed).
    * @param {UIManager} uiManager - UI manager instance
    */
   constructor(editorManager, timelineManager, storageManager, uiManager) {
     this.editorManager = editorManager;
     this.timelineManager = timelineManager;
-    this.storageManager = storageManager;
+    // this.storageManager = storageManager; // Removed
     this.uiManager = uiManager;
 
     /**
@@ -50,56 +50,18 @@ export class VersionControl {
    * Initialize version control system
    */
   init() {
-    const loadedHistory = this.storageManager.loadHistory();
-    const loadedPrefs = this.storageManager.loadUserPreferences();
+    // const loadedHistory = this.storageManager.loadHistory(); // Removed
+    // const loadedPrefs = this.storageManager.loadUserPreferences(); // Removed
 
-    if (loadedHistory) {
-      this._loadHistoryAndPreferences(loadedHistory, loadedPrefs);
-    } else {
-      this._initializeNewRepository();
-    }
+    // if (loadedHistory) { // Removed block
+    //   this._loadHistoryAndPreferences(loadedHistory, loadedPrefs);
+    // } else {
+    this._initializeNewRepository(); // Always initialize new as no persistence
+    // }
 
     this._updateEditorContent();
     this._updateUI();
-    this._saveAllData();
-  }
-  
-  /**
-   * Load history and user preferences
-   * @private
-   * @param {object} history - Loaded history data
-   * @param {object} prefs - Loaded preferences
-   */
-  _loadHistoryAndPreferences(history, prefs) {
-    this._branches = history;
-    
-    if (prefs && this._branches[prefs.currentBranchId]) {
-      const branch = this._branches[prefs.currentBranchId];
-      // Check if the transactionIndex is valid for the branch
-      const indexIsValid = typeof prefs.currentTransactionIndex === 'number' &&
-                           prefs.currentTransactionIndex >= INITIAL_TRANSACTION_INDEX &&
-                           prefs.currentTransactionIndex < branch.transactions.length;
-
-      if (indexIsValid) {
-        this._currentBranchId = prefs.currentBranchId;
-        this._currentTransactionIndex = prefs.currentTransactionIndex;
-      } else {
-        console.warn(`Loaded preference transactionIndex ${prefs.currentTransactionIndex} invalid for branch ${prefs.currentBranchId}. Resetting to branch tip.`);
-        this._currentBranchId = prefs.currentBranchId; 
-        this._currentTransactionIndex = branch.transactions.length > 0 ? branch.transactions.length - 1 : INITIAL_TRANSACTION_INDEX;
-      }
-    } else {
-      // This case handles if loadedHistory exists but prefs are missing/invalid, or branch from prefs doesn't exist.
-      // Or if loadedHistory itself is null/undefined (covered by the caller's check).
-      if (!this._branches[DEFAULT_BRANCH_ID]) { 
-        this._initializeNewRepository(); // If 'main' branch isn't in loaded history for some reason.
-      } else {
-        this._currentBranchId = DEFAULT_BRANCH_ID;
-        // Default to the tip of the main branch if no valid preferences, or initial state if main is empty.
-        const mainBranch = this._branches[DEFAULT_BRANCH_ID];
-        this._currentTransactionIndex = mainBranch.transactions.length > 0 ? mainBranch.transactions.length -1 : INITIAL_TRANSACTION_INDEX;
-      }
-    }
+    // this._saveAllData(); // Removed call
   }
   
   /**
@@ -339,7 +301,7 @@ export class VersionControl {
 
     this._updateEditorContent(); // Ensure editor is synced after commit.
     this._updateUI();
-    this._saveAllData();
+    // this._saveAllData(); // Removed call
   }
   
   /**
@@ -378,7 +340,7 @@ export class VersionControl {
     
     this._updateEditorContent(); 
     this._updateUI();
-    this._saveAllData();
+    // this._saveAllData(); // Removed call
     this.uiManager.displayMessage(`Branch "${branchName}" created and switched to.`, 'success');
     return true;
   }
@@ -421,7 +383,7 @@ export class VersionControl {
     
     this._updateEditorContent();
     this._updateUI();
-    this._saveUserPreferences();
+    // this._saveUserPreferences(); // Removed call
     
     return true;
   }
@@ -443,7 +405,7 @@ export class VersionControl {
     
     this._updateEditorContent();
     this._updateUI();
-    this._saveUserPreferences();
+    // this._saveUserPreferences(); // Removed call
     
     return true;
   }
@@ -466,7 +428,7 @@ export class VersionControl {
     
     this._updateEditorContent();
     this._updateUI();
-    this._saveUserPreferences();
+    // this._saveUserPreferences(); // Removed call
     
     return true;
   }
@@ -558,68 +520,6 @@ export class VersionControl {
     };
   }
   
-  /**
-   * Load all branches data
-   * @param {object} branchesData - Branches data to load
-   * @returns {boolean} Success status
-   */
-  loadAllBranchesData(branchesData) {
-    if (!branchesData || typeof branchesData !== 'object') {
-      return false;
-    }
-    
-    this._branches = branchesData;
-    
-    // Set current branch and version to main branch tip
-    if (this._branches[DEFAULT_BRANCH_ID] && this._branches[DEFAULT_BRANCH_ID].transactions.length > 0) {
-      this._currentBranchId = DEFAULT_BRANCH_ID;
-      this._currentTransactionIndex = this._branches[DEFAULT_BRANCH_ID].transactions.length - 1;
-    } else if (this._branches[DEFAULT_BRANCH_ID]) { // Main branch exists but is empty
-      this._currentBranchId = DEFAULT_BRANCH_ID;
-      this._currentTransactionIndex = INITIAL_TRANSACTION_INDEX;
-    } else {
-      this._initializeNewRepository(); // If 'main' is missing entirely
-    }
-    
-    this._updateEditorContent();
-    this._updateUI();
-    this._saveAllData();
-    
-    return true;
-  }
-
-  /**
-   * Save user preferences
-   * @private
-   */
-  _saveUserPreferences() {
-    if (!this.storageManager) return;
-    
-    this.storageManager.saveUserPreferences({
-      currentBranchId: this._currentBranchId,
-      currentTransactionIndex: this._currentTransactionIndex // Changed from currentTransactionId
-    });
-  }
-
-  /**
-   * Save version history
-   * @private
-   */
-  _saveHistory() {
-    if (!this.storageManager) return;
-    
-    this.storageManager.saveHistory(this._branches);
-  }
-
-  /**
-   * Save all data (history and preferences)
-   * @private
-   */
-  _saveAllData() {
-    this._saveHistory();
-    this._saveUserPreferences();
-  }
-
   /**
    * Gets state information for a specific transaction index on a specific branch.
    * This is used by UI components like the timeline to get details for any point in history.

@@ -43,7 +43,6 @@
 
 import { EditorManager } from './js/editorManager.js';
 import { TimelineManager } from './js/timelineManager.js';
-import { StorageManager } from './js/storageManager.js';
 import { UIManager } from './js/uiManager.js';
 import { VersionControl } from './js/versionControl.js';
 // VersionContentStore is imported by VersionControl directly.
@@ -92,18 +91,18 @@ import { VersionControl } from './js/versionControl.js';
 
     try {
       // Create manager instances
-      const storageManager = new StorageManager();
+      // const storageManager = new StorageManager(); // Removed
       
       // Create managers with circular dependencies, which we'll resolve after creation
       let editorManager = new EditorManager(editorId, null);
       let timelineManager = new TimelineManager(timelineId, null);
-      let uiManager = new UIManager(null, storageManager, timelineManager);
+      let uiManager = new UIManager(null, /* storageManager */ null, timelineManager); // Pass null for storageManager
 
       // Create version control as the central orchestrator
       let versionControl = new VersionControl(
         editorManager,
         timelineManager,
-        storageManager,
+        /* storageManager */ null, // Pass null for storageManager
         uiManager
       );
 

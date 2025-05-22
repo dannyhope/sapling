@@ -20,6 +20,7 @@ export class TimelineManager {
     VIEWBOX_PADDING: 20,
     BRANCH_LABEL_FONT_SIZE: "18px",
     BRANCH_LABEL_DX_OFFSET: "-15px",
+    BRANCH_LABEL_DY_OFFSET: "2px", // Vertical fine-tuning for branch label alignment
     BRANCH_CONNECTIONS_GROUP_ID: "branch-connections-group",
     BRANCH_NODES_GROUP_ID: "branch-nodes-group",
     BRANCH_LABELS_GROUP_ID: "branch-labels-group",
@@ -212,6 +213,8 @@ export class TimelineManager {
         branchLabel.setAttribute("text-anchor", TimelineManager.CONSTANTS.TEXT_ANCHOR_END);
         branchLabel.setAttribute("dx", TimelineManager.CONSTANTS.BRANCH_LABEL_DX_OFFSET); // Shift text 15px left of node line start
         branchLabel.setAttribute("y", branchLabelYPosition.toString()); 
+        branchLabel.setAttribute("dominant-baseline", "middle"); // Vertically center the text
+        branchLabel.setAttribute("dy", TimelineManager.CONSTANTS.BRANCH_LABEL_DY_OFFSET); // Fine-tune vertical alignment
         branchLabel.setAttribute("font-size", TimelineManager.CONSTANTS.BRANCH_LABEL_FONT_SIZE); // Increased font size
         branchLabel.setAttribute("fill", TimelineManager.CONSTANTS.COLOR_GRAY);
         branchLabel.textContent = branchId;
