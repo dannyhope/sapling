@@ -249,7 +249,7 @@ export class VersionControl {
     let autoBranchMessagePrefix = "";
 
     if (!isAtTipOfBranch) { 
-      const newBranchName = `${BRANCH_ID_AUTOMATIC_PREFIX}${this._generateId().substring(0,12)}`;
+      const newBranchName = `${BRANCH_ID_AUTOMATIC_PREFIX}${this._generateId()}`;
       const parentBranchIdForNewBranch = this._currentBranchId;
       const parentTransactionIndexForNewBranch = this._currentTransactionIndex; // Where we are forking from
       
