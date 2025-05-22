@@ -1,5 +1,16 @@
 import { VersionContentStore } from './versionContentStore.js';
 
+// Constants for Version Control
+const DEFAULT_BRANCH_ID = 'main';
+const INITIAL_TRANSACTION_INDEX = -1;
+const OP_TYPE_ADD = 'charTyped';
+const OP_TYPE_DELETE = 'charDeleted'; // Single character deletion
+const OP_TYPE_DELETE_MULTI = 'charsDeleted'; // Multiple character deletion
+const OP_TYPE_INITIAL = 'initial';
+const OP_TYPE_BRANCH_CREATED = 'branch_created';
+const OP_TYPE_UNKNOWN = 'unknown_op';
+const BRANCH_ID_AUTOMATIC_PREFIX = 'branch-';
+
 /**
  * @class VersionControl
  * @description Core version control system that manages text content history
@@ -30,12 +41,9 @@ export class VersionControl {
     /**
      * @private @type {number}
      * Index in the current branch's transactions array.
-     * -1 represents the initialContent state of the branch.
+     * `INITIAL_TRANSACTION_INDEX` (-1) represents the initialContent state of the branch.
      */
     this._currentTransactionIndex = -1;
-    
-    /** @private @type {Array} Version history for undo/redo operations -- DEPRECATED by new model */
-    // this._versionHistory = []; -- REMOVE
   }
 
   /**
@@ -48,7 +56,7 @@ export class VersionControl {
     if (loadedHistory) {
       this._loadHistoryAndPreferences(loadedHistory, loadedPrefs);
     } else {
-      this._createDefaultMainBranch();
+      this._initializeNewRepository();
     }
 
     this._updateEditorContent();
@@ -69,7 +77,7 @@ export class VersionControl {
       const branch = this._branches[prefs.currentBranchId];
       // Check if the transactionIndex is valid for the branch
       const indexIsValid = typeof prefs.currentTransactionIndex === 'number' &&
-                           prefs.currentTransactionIndex >= -1 &&
+                           prefs.currentTransactionIndex >= INITIAL_TRANSACTION_INDEX &&
                            prefs.currentTransactionIndex < branch.transactions.length;
 
       if (indexIsValid) {
@@ -78,41 +86,20 @@ export class VersionControl {
       } else {
         console.warn(`Loaded preference transactionIndex ${prefs.currentTransactionIndex} invalid for branch ${prefs.currentBranchId}. Resetting to branch tip.`);
         this._currentBranchId = prefs.currentBranchId; 
-        this._currentTransactionIndex = branch.transactions.length > 0 ? branch.transactions.length - 1 : -1;
+        this._currentTransactionIndex = branch.transactions.length > 0 ? branch.transactions.length - 1 : INITIAL_TRANSACTION_INDEX;
       }
     } else {
-      if (!this._branches.main) { 
-        this._createDefaultMainBranch();
+      // This case handles if loadedHistory exists but prefs are missing/invalid, or branch from prefs doesn't exist.
+      // Or if loadedHistory itself is null/undefined (covered by the caller's check).
+      if (!this._branches[DEFAULT_BRANCH_ID]) { 
+        this._initializeNewRepository(); // If 'main' branch isn't in loaded history for some reason.
       } else {
-        this._currentBranchId = 'main';
-        this._currentTransactionIndex = -1; // Start at initialContent of main
+        this._currentBranchId = DEFAULT_BRANCH_ID;
+        // Default to the tip of the main branch if no valid preferences, or initial state if main is empty.
+        const mainBranch = this._branches[DEFAULT_BRANCH_ID];
+        this._currentTransactionIndex = mainBranch.transactions.length > 0 ? mainBranch.transactions.length -1 : INITIAL_TRANSACTION_INDEX;
       }
     }
-  }
-  
-  /**
-   * Check if branch exists
-   * @private
-   * @param {string} branchId - Branch ID to check
-   * @returns {boolean} Whether branch exists
-   */
-  _branchExists(branchId) {
-    return !!this._branches[branchId];
-  }
-  
-  /**
-   * Check if version exists in branch
-   * @private
-   * @param {string} branchId - Branch ID
-   * @param {string} transactionIndex - Transaction index
-   * @returns {boolean} Whether version exists
-   */
-  _versionExists(branchId, transactionIndex) { // Checks for transactionIndex validity
-    const branch = this._branches[branchId];
-    if (!branch) return false;
-    return typeof transactionIndex === 'number' && 
-           transactionIndex >= -1 && 
-           transactionIndex < branch.transactions.length;
   }
   
   /**
@@ -140,20 +127,20 @@ export class VersionControl {
   }
 
   /**
-   * Create default main branch
+   * Initializes a new repository with a default main branch.
+   * This is called if no history is loaded or if the loaded history is fundamentally incomplete.
    * @private
    */
-  _createDefaultMainBranch() {
-    this._branches.main = {
-      id: 'main',
+  _initializeNewRepository() {
+    this._branches[DEFAULT_BRANCH_ID] = {
+      id: DEFAULT_BRANCH_ID,
       parentBranchId: null,
-      parentTransactionIndex: -1, // Main has no parent transaction it forked from
+      parentTransactionIndex: INITIAL_TRANSACTION_INDEX, // Main has no parent transaction it forked from
       initialContent: "", 
       transactions: [] // Log of pure opArrays for this branch
-      // creationTimestamp: Date.now() // Optional: if main branch needs a fixed creation time
     };
-    this._currentBranchId = 'main';
-    this._currentTransactionIndex = -1; // Initially, state is initialContent before any transactions
+    this._currentBranchId = DEFAULT_BRANCH_ID;
+    this._currentTransactionIndex = INITIAL_TRANSACTION_INDEX; // Start at initialContent
   }
 
   /**
@@ -166,30 +153,8 @@ export class VersionControl {
   }
 
   /**
-   * Finds the branch ID that a given transaction index belongs to.
-   * @param {string} transactionIndex - The index of the transaction to find.
-   * @returns {string|null} The ID of the branch, or null if not found.
-   */
-  findBranchOfVersion(transactionIndex) { // Renamed to findBranchOfTransaction for clarity
-    // This method becomes problematic with only indices. 
-    // An index is only meaningful within its own branch context.
-    // A global transaction ID was useful here. For now, this might need to be re-thought
-    // or its usage by TimelineManager re-evaluated. It cannot reliably find a branch
-    // given only an arbitrary index without also knowing the branch that index belongs to.
-    // If versionId is meant to be a unique ID (which we removed from transactions),
-    // this function as-is is no longer suitable. 
-    // If versionId passed here is actually a {branchId, index} object, that's different.
-    console.warn("findBranchOfVersion/Transaction is problematic with index-only transaction logs and needs review based on caller's intent.");
-    // Assuming for now it might be called with the current branch's details implicitly
-    if (this._currentTransactionIndex > -1 && this._branches[this._currentBranchId]?.transactions[this._currentTransactionIndex]) {
-        return this._currentBranchId;
-    }
-    return null; 
-  }
-
-  /**
    * Reconstructs text for a given branch up to a specific transaction index.
-   * If targetTransactionIndex is -1, returns the branch's initialContent.
+   * If targetTransactionIndex is `INITIAL_TRANSACTION_INDEX` (-1), returns the branch's initialContent.
    * @private
    */
   _reconstructText(branchId, targetTransactionIndex) {
@@ -200,7 +165,7 @@ export class VersionControl {
     }
 
     let textChars = branch.initialContent.split('');
-    if (targetTransactionIndex === -1) {
+    if (targetTransactionIndex === INITIAL_TRANSACTION_INDEX) {
       return branch.initialContent;
     }
 
@@ -226,7 +191,7 @@ export class VersionControl {
       } else if (opDetails.length === 1 && typeof index === 'number') {
         opType = 'd_single'; // Deletion (single character)
       } else {
-        opType = 'unknown';
+        opType = OP_TYPE_UNKNOWN;
       }
       
       if (opType === 'a') { // Add [index, string_to_add]
@@ -255,7 +220,7 @@ export class VersionControl {
     // Optimized op: [index, string_to_add]
     const opArray = [index, char];
     // The 'inferredType' for _commitOperation is mainly for message generation if not overridden
-    this._commitOperation(opArray, 'charTyped', message || `Typed '${char}' at index ${index}`);
+    this._commitOperation(opArray, OP_TYPE_ADD, message || `Typed '${char}' at index ${index}`);
   }
 
   /**
@@ -267,7 +232,7 @@ export class VersionControl {
     // Optimized op for single character deletion: [index]
     const opArray = [index]; 
     // The 'inferredType' for _commitOperation is mainly for message generation
-    this._commitOperation(opArray, 'charDeleted', message || `Deleted character at index ${index}`);
+    this._commitOperation(opArray, OP_TYPE_DELETE, message || `Deleted character at index ${index}`);
   }
 
   /**
@@ -279,7 +244,7 @@ export class VersionControl {
   recordMultipleCharacterDeletion(startIndex, count, message) {
     // Optimized op for multiple character deletion: [startIndex, count]
     const opArray = [startIndex, count];
-    this._commitOperation(opArray, 'charsDeleted', message || `Deleted ${count} characters starting at index ${startIndex}`);
+    this._commitOperation(opArray, OP_TYPE_DELETE_MULTI, message || `Deleted ${count} characters starting at index ${startIndex}`);
   }
   
   /**
@@ -292,11 +257,12 @@ export class VersionControl {
       console.warn(`Current branch '${this._currentBranchId}' not found during getOrCreate, attempting to recover or default.`);
       // With index-only, direct recovery to a specific transaction is hard without branch context.
       // We default to the start of 'main' or create it.
-      if (this._branches.main) {
-        this._currentBranchId = 'main';
-        this._currentTransactionIndex = this._branches.main.transactions.length > 0 ? this._branches.main.transactions.length -1 : -1;
+      if (this._branches[DEFAULT_BRANCH_ID]) {
+        this._currentBranchId = DEFAULT_BRANCH_ID;
+        const mainBranch = this._branches[DEFAULT_BRANCH_ID];
+        this._currentTransactionIndex = mainBranch.transactions.length > 0 ? mainBranch.transactions.length -1 : INITIAL_TRANSACTION_INDEX;
       } else {
-        this._createDefaultMainBranch(); // This sets currentBranchId and currentTransactionIndex
+        this._initializeNewRepository(); // This sets currentBranchId and currentTransactionIndex
       }
       console.log(`Recovered current branch to: ${this._currentBranchId} at index ${this._currentTransactionIndex}`);
     }
@@ -321,7 +287,7 @@ export class VersionControl {
     let autoBranchMessagePrefix = "";
 
     if (!isAtTipOfBranch) { 
-      const newBranchName = `branch-${this._generateId().substring(0,12)}`;
+      const newBranchName = `${BRANCH_ID_AUTOMATIC_PREFIX}${this._generateId().substring(0,12)}`;
       const parentBranchIdForNewBranch = this._currentBranchId;
       const parentTransactionIndexForNewBranch = this._currentTransactionIndex; // Where we are forking from
       
@@ -337,7 +303,7 @@ export class VersionControl {
       targetBranchId = newBranchName;
       this._currentBranchId = newBranchName; 
       targetBranchObject = this._branches[newBranchName];
-      this._currentTransactionIndex = -1; // New branch starts at its initial content, before this new op
+      this._currentTransactionIndex = INITIAL_TRANSACTION_INDEX; // New branch starts at its initial content, before this new op
       autoBranchMessagePrefix = "(Branched) ";
     } else {
       // If at the tip, but not the initial state, and we are about to add a new transaction.
@@ -371,10 +337,7 @@ export class VersionControl {
     const displayMessage = autoBranchMessagePrefix + (message || `${inferredType} operation performed`);
     if (this.uiManager) this.uiManager.displayMessage(displayMessage, 'info');
 
-    const currentText = this._reconstructText(this._currentBranchId, this._currentTransactionIndex);
-    this.editorManager.setValue(currentText, true); // Programmatic change
-    this.editorManager.updatePreviousContent(currentText);
-    
+    this._updateEditorContent(); // Ensure editor is synced after commit.
     this._updateUI();
     this._saveAllData();
   }
@@ -411,7 +374,7 @@ export class VersionControl {
     };
     
     this._currentBranchId = branchName;
-    this._currentTransactionIndex = -1; // New branch starts at its initialContent state
+    this._currentTransactionIndex = INITIAL_TRANSACTION_INDEX; // New branch starts at its initialContent state
     
     this._updateEditorContent(); 
     this._updateUI();
@@ -421,9 +384,9 @@ export class VersionControl {
   }
   
   /**
-   * Switch to a specific version
-   * @param {string} branchId - Branch ID
-   * @param {string} transactionIndex - Transaction index
+   * Switch to a specific version (a specific transaction in a specific branch).
+   * @param {string} branchId - Branch ID.
+   * @param {number} transactionIndex - Transaction index. `INITIAL_TRANSACTION_INDEX` (-1) for branch's initial content.
    * @returns {boolean} Success status
    */
   switchToVersion(branchId, transactionIndex) { 
@@ -439,15 +402,15 @@ export class VersionControl {
     }
     
     const indexIsValid = typeof transactionIndex === 'number' &&
-                         transactionIndex >= -1 && 
+                         transactionIndex >= INITIAL_TRANSACTION_INDEX && 
                          transactionIndex < this._branches[branchId].transactions.length;
 
-    if (!indexIsValid && transactionIndex !== -1) { // Allow -1 for initialContent
-        // If transactionIndex is -1, it's valid if branch exists.
+    if (!indexIsValid && transactionIndex !== INITIAL_TRANSACTION_INDEX) { // Allow INITIAL_TRANSACTION_INDEX for initialContent
+        // If transactionIndex is INITIAL_TRANSACTION_INDEX, it's valid if branch exists.
         // If transactionIndex is an actual index, it must be within bounds.
-        if (transactionIndex === -1 && this._branches[branchId].transactions.length === 0) { 
+        if (transactionIndex === INITIAL_TRANSACTION_INDEX && this._branches[branchId].transactions.length === 0) { 
             // This is fine, switching to initialContent of an empty branch
-        } else if (transactionIndex < -1 || transactionIndex >= this._branches[branchId].transactions.length) {
+        } else if (transactionIndex < INITIAL_TRANSACTION_INDEX || transactionIndex >= this._branches[branchId].transactions.length) {
             console.error(`Transaction index ${transactionIndex} is out of bounds for branch ${branchId}. Max index: ${this._branches[branchId].transactions.length -1}`);
             return false;
         }
@@ -471,7 +434,7 @@ export class VersionControl {
     const currentBranch = this._branches[this._currentBranchId];
     if (!currentBranch) return false;
 
-    if (this._currentTransactionIndex === -1) { 
+    if (this._currentTransactionIndex === INITIAL_TRANSACTION_INDEX) { 
         return false; 
     }
 
@@ -526,59 +489,55 @@ export class VersionControl {
   }
 
   /**
-   * Get current version object
-   * @returns {object|null} Current version or null if not found
+   * Gets information about the current state (branch and transaction).
+   * This includes metadata like inferred operation type and a descriptive message.
+   * @returns {object|null} Current state information or null if the current branch is not found.
+   * The returned object has:
+   *   `id`: { branchId: string, index: number } - Composite identifier for the state.
+   *   `branchId`: string - The ID of the current branch.
+   *   `transactionIndex`: number - The current transaction index.
+   *   `timestamp`: number - Ephemeral timestamp of when this info was generated.
+   *   `type`: string - Inferred type of the operation (e.g., OP_TYPE_ADD, OP_TYPE_INITIAL).
+   *   `message`: string - A descriptive message for the state.
+   *   `op`: Array|null - The raw operation array for the transaction, or null for initialContent.
    */
-  getCurrentVersion() { // Renamed to getCurrentStateInfo
+  getCurrentStateInfo() {
     const branch = this._branches[this._currentBranchId];
     if (!branch) return null;
     
     let currentOpArray = null;
     let timestamp = Date.now(); // Timestamps are now ephemeral, generated on query
-    let message, inferredType;
+    let opInfo = { type: OP_TYPE_UNKNOWN, description: "State information unavailable" };
 
-    if (this._currentTransactionIndex !== -1) {
+    if (this._currentTransactionIndex !== INITIAL_TRANSACTION_INDEX) {
       if (this._currentTransactionIndex >= 0 && this._currentTransactionIndex < branch.transactions.length) {
         currentOpArray = branch.transactions[this._currentTransactionIndex];
       } else {
-        console.error(`getCurrentStateInfo: _currentTransactionIndex ${this._currentTransactionIndex} is out of bounds for branch ${branch.id} transactions.`);
+        console.error(`getCurrentStateInfo: _currentTransactionIndex ${this._currentTransactionIndex} is out of bounds for branch ${branch.id}. Max index: ${branch.transactions.length -1}`);
         // Attempt to recover or return a sensible default for a corrupted state
         this._currentTransactionIndex = branch.transactions.length - 1; // Go to last known good state
         if (this._currentTransactionIndex >=0) {
             currentOpArray = branch.transactions[this._currentTransactionIndex];
-        } else { // Still no good state, branch is empty
-            // Fallthrough to initialContent representation below
+        } else { // Branch is empty or became empty
+             this._currentTransactionIndex = INITIAL_TRANSACTION_INDEX; // Fallback to initial state
+             // currentOpArray remains null
         }
       }
 
       if (currentOpArray) {
-        // Infer type and generate message from op for timeline coloring based on the refined op structure
-        const opDetails = currentOpArray;
-        if (opDetails.length === 2 && typeof opDetails[1] === 'string') {
-          inferredType = 'charTyped';
-          message = `Typed '${opDetails[1]}' at index ${opDetails[0]}`;
-        } else if (opDetails.length === 2 && typeof opDetails[1] === 'number') {
-          inferredType = 'charDeleted';
-          message = `Deleted ${opDetails[1]} chars at index ${opDetails[0]}`;
-        } else if (opDetails.length === 1 && typeof opDetails[0] === 'number') {
-          inferredType = 'charDeleted';
-          message = `Deleted char at index ${opDetails[0]}`;
-        } else {
-          inferredType = 'unknown_op';
-          message = 'Unknown operation';
-        }
-      } else { // Fallback if currentOpArray couldn't be determined (should be caught by initialContent case)
-         inferredType = 'initial';
-         message = branch.id === 'main' ? "Initial empty content" : `State for ${branch.id} (no specific transaction)`;
+        opInfo = this._getOperationInfo(currentOpArray);
+      } else if (this._currentTransactionIndex === INITIAL_TRANSACTION_INDEX) { // Explicitly check if recovery led to initial state
+        opInfo = {
+          type: branch.id === DEFAULT_BRANCH_ID ? OP_TYPE_INITIAL : OP_TYPE_BRANCH_CREATED,
+          description: branch.id === DEFAULT_BRANCH_ID ? "Initial empty content" : `Branched to ${branch.id} (initial state)`
+        };
       }
 
-    } else { // Represents the initialContent state of the branch
-      if (branch.id === 'main') {
-        message = "Initial empty content";
-        inferredType = 'initial';
+    } else { // Represents the INITIAL_TRANSACTION_INDEX state of the branch
+      if (branch.id === DEFAULT_BRANCH_ID) {
+        opInfo = { type: OP_TYPE_INITIAL, description: "Initial empty content" };
       } else {
-        message = `Branched to ${branch.id} (initial state)`;
-        inferredType = 'branch_created';
+        opInfo = { type: OP_TYPE_BRANCH_CREATED, description: `Branched to ${branch.id} (initial state)` };
       }
     }
     
@@ -593,8 +552,8 @@ export class VersionControl {
       branchId: this._currentBranchId, // Redundant with id.branchId, but kept for direct access
       transactionIndex: this._currentTransactionIndex, // Actual index
       timestamp: timestamp, // Ephemeral timestamp
-      type: inferredType, 
-      message: message, // Generated message
+      type: opInfo.type, 
+      message: opInfo.description, // Generated message
       op: currentOpArray // The actual operation array, if applicable
     };
   }
@@ -612,11 +571,14 @@ export class VersionControl {
     this._branches = branchesData;
     
     // Set current branch and version to main branch tip
-    if (this._branches.main && this._branches.main.transactions.length > 0) {
-      this._currentBranchId = 'main';
-      this._currentTransactionIndex = this._branches.main.transactions.length - 1;
+    if (this._branches[DEFAULT_BRANCH_ID] && this._branches[DEFAULT_BRANCH_ID].transactions.length > 0) {
+      this._currentBranchId = DEFAULT_BRANCH_ID;
+      this._currentTransactionIndex = this._branches[DEFAULT_BRANCH_ID].transactions.length - 1;
+    } else if (this._branches[DEFAULT_BRANCH_ID]) { // Main branch exists but is empty
+      this._currentBranchId = DEFAULT_BRANCH_ID;
+      this._currentTransactionIndex = INITIAL_TRANSACTION_INDEX;
     } else {
-      this._createDefaultMainBranch();
+      this._initializeNewRepository(); // If 'main' is missing entirely
     }
     
     this._updateEditorContent();
@@ -662,7 +624,7 @@ export class VersionControl {
    * Gets state information for a specific transaction index on a specific branch.
    * This is used by UI components like the timeline to get details for any point in history.
    * @param {string} branchId - The ID of the branch.
-   * @param {number} transactionIndex - The index of the transaction (-1 for initialContent).
+   * @param {number} transactionIndex - The index of the transaction (`INITIAL_TRANSACTION_INDEX` for initialContent).
    * @returns {object|null} An object with state details, or null if invalid.
    */
   getStateInfoAt(branchId, transactionIndex) {
@@ -673,7 +635,7 @@ export class VersionControl {
     }
 
     const indexIsValid = typeof transactionIndex === 'number' &&
-                         transactionIndex >= -1 &&
+                         transactionIndex >= INITIAL_TRANSACTION_INDEX &&
                          transactionIndex < branch.transactions.length;
 
     if (!indexIsValid) {
@@ -683,36 +645,21 @@ export class VersionControl {
 
     let opArray = null;
     let timestamp = Date.now(); // Ephemeral timestamp
-    let message, inferredType;
+    let opInfo = { type: OP_TYPE_UNKNOWN, description: "State information unavailable" };
 
-    if (transactionIndex !== -1) {
+    if (transactionIndex !== INITIAL_TRANSACTION_INDEX) {
       opArray = branch.transactions[transactionIndex];
-      const opDetails = opArray;
-      if (opDetails.length === 2 && typeof opDetails[1] === 'string') {
-        inferredType = 'charTyped';
-        message = `Typed '${opDetails[1]}' at index ${opDetails[0]}`;
-      } else if (opDetails.length === 2 && typeof opDetails[1] === 'number') {
-        inferredType = 'charDeleted';
-        message = `Deleted ${opDetails[1]} chars at index ${opDetails[0]}`;
-      } else if (opDetails.length === 1 && typeof opDetails[0] === 'number') {
-        inferredType = 'charDeleted';
-        message = `Deleted char at index ${opDetails[0]}`;
-      } else {
-        inferredType = 'unknown_op';
-        message = 'Unknown operation';
-      }
+      opInfo = this._getOperationInfo(opArray);
     } else { // Represents the initialContent state of the branch
-      if (branch.id === 'main') {
-        message = "Initial empty content";
-        inferredType = 'initial';
+      if (branch.id === DEFAULT_BRANCH_ID) {
+        opInfo = { type: OP_TYPE_INITIAL, description: "Initial empty content" };
       } else {
         // Attempt to get a more specific creation message for a branch
         const parentBranch = this._branches[branch.parentBranchId];
-        const parentOpMessage = parentBranch && branch.parentTransactionIndex !== -1 && branch.parentTransactionIndex < parentBranch.transactions.length ? 
+        const parentOpMessage = parentBranch && branch.parentTransactionIndex !== INITIAL_TRANSACTION_INDEX && branch.parentTransactionIndex < parentBranch.transactions.length ? 
                                 `from op [${parentBranch.transactions[branch.parentTransactionIndex].join(',')}] on ${branch.parentBranchId}` : 
                                 `from ${branch.parentBranchId}`;
-        message = `Branched to ${branch.id} (initial state) ${parentOpMessage}`;
-        inferredType = 'branch_created';
+        opInfo = { type: OP_TYPE_BRANCH_CREATED, description: `Branched to ${branch.id} (initial state) ${parentOpMessage}` };
       }
     }
 
@@ -726,9 +673,47 @@ export class VersionControl {
       branchId: branchId, 
       transactionIndex: transactionIndex, 
       timestamp: timestamp, 
-      type: inferredType, 
-      message: message, 
+      type: opInfo.type, 
+      message: opInfo.description, 
       op: opArray 
     };
+  }
+
+  /**
+   * Interprets a raw operation array and returns structured information about it.
+   * The opArray format is:
+   * - Add: `[index, string_to_add]`
+   * - Delete single: `[index]` (implies 1 character at that index)
+   * - Delete multiple: `[index, count_to_delete]`
+   * @private
+   * @param {Array} opArray - The operation array.
+   * @returns {{type: string, description: string}} An object containing the operation type and a descriptive message.
+   *           Returns OP_TYPE_UNKNOWN if the opArray is malformed.
+   */
+  _getOperationInfo(opArray) {
+    if (!Array.isArray(opArray) || opArray.length === 0) {
+      return { type: OP_TYPE_UNKNOWN, description: 'Invalid or empty operation array' };
+    }
+
+    const index = opArray[0];
+
+    // Addition: [index, string_to_add]
+    if (opArray.length === 2 && typeof opArray[1] === 'string') {
+      const charOrString = opArray[1];
+      return { type: OP_TYPE_ADD, description: `Typed '${charOrString}' at index ${index}` };
+    }
+    // Deletion (multiple characters): [index, count]
+    else if (opArray.length === 2 && typeof opArray[1] === 'number') {
+      const count = opArray[1];
+      return { type: OP_TYPE_DELETE_MULTI, description: `Deleted ${count} characters starting at index ${index}` };
+    }
+    // Deletion (single character): [index]
+    else if (opArray.length === 1 && typeof index === 'number') {
+      // This implies deletion of 1 character at 'index'
+      return { type: OP_TYPE_DELETE, description: `Deleted character at index ${index}` };
+    }
+    
+    console.warn("Unknown operation type or malformed opDetails in transaction:", opArray);
+    return { type: OP_TYPE_UNKNOWN, description: 'Unknown or malformed operation' };
   }
 } 
