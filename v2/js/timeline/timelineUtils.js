@@ -22,4 +22,23 @@ export class TimelineUtils {
     }
     return result;
   }
+
+  /**
+   * Debounces a function, delaying its execution until after a specified wait time
+   * has elapsed since the last time it was invoked.
+   * @param {function} func - The function to debounce.
+   * @param {number} wait - The number of milliseconds to delay.
+   * @returns {function} The new debounced function.
+   */
+  static debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  }
 } 

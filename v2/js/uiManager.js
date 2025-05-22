@@ -92,8 +92,9 @@ export class UIManager {
    * @param {MouseEvent} event - The mouse event.
    */
   _handleGlobalMouseMove(event) {
-    if (this.timelineManager && this.timelineManager.isDragging) {
-      this.timelineManager.handleGlobalDragMove(event);
+    if (this.timelineManager && this.timelineManager.eventHandler && this.timelineManager.eventHandler._isTimelineDragging) {
+      // Delegate to TimelineEventHandler's internal method that calls dragHandler.handleDragMove
+      this.timelineManager.eventHandler._handleGlobalMouseMove(event);
     }
   }
 
@@ -104,8 +105,9 @@ export class UIManager {
    * @param {MouseEvent} event - The mouse event.
    */
   _handleGlobalMouseUp(event) {
-    if (this.timelineManager && this.timelineManager.isDragging) {
-      this.timelineManager.handleGlobalDragEnd(event);
+    if (this.timelineManager && this.timelineManager.eventHandler && this.timelineManager.eventHandler._isTimelineDragging) {
+      // Delegate to TimelineEventHandler's internal method that calls dragHandler.handleDragEnd and cleans up
+      this.timelineManager.eventHandler._handleGlobalMouseUp(event);
     }
   }
 

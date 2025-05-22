@@ -1,18 +1,19 @@
 /**
- * @file eventHandler.js
+ * @file timelineEventHandler.js
  * @description Manages event handling for timeline components, centralizing DOM event
  *              listeners and interactions for the timeline.
  */
 
 import { TIMELINE_CONSTANTS } from './timelineConstants.js'; // May need TIMELINE_CONSTANTS
+import { TimelineUtils } from './timelineUtils.js';
 
 /**
- * @class EventHandler
+ * @class TimelineEventHandler
  * @description Handles timeline-specific DOM event listening and dispatching.
  */
-export class EventHandler {
+export class TimelineEventHandler {
   /**
-   * Creates an EventHandler instance.
+   * Creates an TimelineEventHandler instance.
    * @param {HTMLElement} timelineContainerEl - The main container element for the timeline SVG.
    * @param {import('../timelineManager.js').TimelineManager} timelineManager - The TimelineManager instance.
    * @param {import('./timelineDragHandler.js').TimelineDragHandler} dragHandler - The TimelineDragHandler instance.
@@ -23,15 +24,23 @@ export class EventHandler {
     this.dragHandler = dragHandler;       // To delegate drag-related events
 
     this._isTimelineDragging = false; // Internal state to manage global listeners
+    this._eventListeners = {}; // For custom event registration
 
     // Bound versions of global event handlers
     this._boundHandleGlobalMouseMove = this._handleGlobalMouseMove.bind(this);
     this._boundHandleGlobalMouseUp = this._handleGlobalMouseUp.bind(this);
-    this._boundHandleResize = this._handleResize.bind(this);
+    // Debounce the resize handler
+    this._debouncedRender = TimelineUtils.debounce(() => {
+      if (this.timelineManager && this.timelineManager.render && this.timelineContainerEl.offsetParent !== null) {
+        // console.log('Debounced resize detected, calling timelineManager.render()');
+        this.timelineManager.render();
+      }
+    }, 250); // 250ms debounce delay
+    this._boundHandleResize = this._handleResize.bind(this); // Keep original for observer, call debounced version from it
 
     this._resizeObserver = null;
 
-    // console.log('EventHandler initialized'); // For debugging
+    // console.log('TimelineEventHandler initialized'); // For debugging
   }
 
   /**
@@ -41,7 +50,7 @@ export class EventHandler {
   initializeEventListeners() {
     this._initNodeEventListeners();
     this._initResizeObserver();
-    // console.log('EventHandler listeners initialized');
+    // console.log('TimelineEventHandler listeners initialized');
   }
 
   /**
@@ -73,47 +82,26 @@ export class EventHandler {
     // Check if the target is a node hit area or a child of it
     const hitArea = event.target.closest('.timeline-node-hit-area'); // Assuming hit areas have this class
 
-    if (hitArea && this.dragHandler) {
-      // Need to extract branchId and transactionIndex.
-      // This info might be on dataset attributes of hitArea or its parent visual node.
-      // The TimelineNodeRenderer currently sets dataset.compositeKey on the visual node.
-      // We need to ensure hitArea or visual node can be accessed.
+    try {
+      if (hitArea && this.dragHandler) {
+        const nodeInfo = this.timelineManager.getNodeInfoFromEvent(event);
 
-      // Let's assume the visual node is accessible, perhaps hitArea is a child of the group containing the visual node
-      // or we query for it based on the hitArea's context.
-      // This part needs careful implementation based on final DOM structure from NodeRenderer.
-      
-      // Placeholder: Assume we can get branchId and index
-      // const branchId = hitArea.dataset.branchId; // Example
-      // const transactionIndex = parseInt(hitArea.dataset.transactionIndex, 10); // Example
-      // const visualNodeElement = hitArea.parentElement.querySelector('.timeline-node'); // Example
-
-      // For now, this logic will be refined in a subsequent task.
-      // The key is that TimelineDragHandler.handleNodeMouseDown needs the event, branchId, transactionIndex, and the visual node element.
-      
-      // console.log('Node mousedown detected by EventHandler', event.target);
-
-      // If successfully initiated drag in dragHandler, it should set its internal state.
-      // We then set our internal state and attach global listeners.
-      // This is a simplified call; dragHandler.handleNodeMouseDown might need more params or return a status.
-      // The actual call to dragHandler.handleNodeMouseDown might be better placed in TimelineManager
-      // if EventHandler's role is purely to capture and delegate the raw event.
-      // However, the task implies EventHandler manages more.
-
-      // Let's assume for now TimelineManager will provide a way to get necessary info from event target
-      const nodeInfo = this.timelineManager.getNodeInfoFromEvent(event);
-
-      if (nodeInfo) {
-        // console.log('Node info from event:', nodeInfo);
-        this.dragHandler.handleNodeMouseDown(event, nodeInfo.branchId, nodeInfo.transactionIndex, nodeInfo.nodeElement);
-        
-        if (this.dragHandler.isDragging()) { // Add an isDragging method to TimelineDragHandler
-            this._isTimelineDragging = true;
-            document.addEventListener('mousemove', this._boundHandleGlobalMouseMove);
-            document.addEventListener('mouseup', this._boundHandleGlobalMouseUp);
-            // console.log('Global mousemove and mouseup listeners ADDED by EventHandler');
+        if (nodeInfo) {
+          // console.log('Node info from event:', nodeInfo);
+          this.dragHandler.handleNodeMouseDown(event, nodeInfo.branchId, nodeInfo.transactionIndex, nodeInfo.nodeElement);
+          
+          if (this.dragHandler.isDragging()) { // Add an isDragging method to TimelineDragHandler
+              this._isTimelineDragging = true;
+              document.addEventListener('mousemove', this._boundHandleGlobalMouseMove);
+              document.addEventListener('mouseup', this._boundHandleGlobalMouseUp);
+              // console.log('Global mousemove and mouseup listeners ADDED by TimelineEventHandler');
+          }
+        } else {
+          console.warn('TimelineEventHandler: Could not get nodeInfo from mousedown event target:', event.target);
         }
       }
+    } catch (error) {
+      console.error('TimelineEventHandler: Error in _handleNodeMouseDown:', error);
     }
   }
 
@@ -125,8 +113,12 @@ export class EventHandler {
    * @private
    */
   _handleGlobalMouseMove(event) {
-    if (this._isTimelineDragging && this.dragHandler) {
-      this.dragHandler.handleDragMove(event);
+    try {
+      if (this._isTimelineDragging && this.dragHandler) {
+        this.dragHandler.handleDragMove(event);
+      }
+    } catch (error) {
+      console.error('TimelineEventHandler: Error in _handleGlobalMouseMove:', error);
     }
   }
 
@@ -137,12 +129,16 @@ export class EventHandler {
    * @private
    */
   _handleGlobalMouseUp(event) {
-    if (this._isTimelineDragging && this.dragHandler) {
-      this.dragHandler.handleDragEnd(event); // This should reset dragHandler's internal dragging state
-      this._isTimelineDragging = false;
-      document.removeEventListener('mousemove', this._boundHandleGlobalMouseMove);
-      document.removeEventListener('mouseup', this._boundHandleGlobalMouseUp);
-      // console.log('Global mousemove and mouseup listeners REMOVED by EventHandler');
+    try {
+      if (this._isTimelineDragging && this.dragHandler) {
+        this.dragHandler.handleDragEnd(event); // This should reset dragHandler's internal dragging state
+        this._isTimelineDragging = false;
+        document.removeEventListener('mousemove', this._boundHandleGlobalMouseMove);
+        document.removeEventListener('mouseup', this._boundHandleGlobalMouseUp);
+        // console.log('Global mousemove and mouseup listeners REMOVED by TimelineEventHandler');
+      }
+    } catch (error) {
+      console.error('TimelineEventHandler: Error in _handleGlobalMouseUp:', error);
     }
   }
 
@@ -164,11 +160,60 @@ export class EventHandler {
    * @private
    */
   _handleResize(entries) {
-    // We typically only observe one element here, but ResizeObserver API provides entries array.
-    // For now, any resize will trigger a render if timelineManager is available.
-    if (this.timelineManager && this.timelineManager.render && this.timelineContainerEl.offsetParent !== null) {
-        // console.log('Resize detected, calling timelineManager.render()');
-        this.timelineManager.render();
+    try {
+      // We typically only observe one element here, but ResizeObserver API provides entries array.
+      // For now, any resize will trigger a render if timelineManager is available.
+      // Call the debounced render function
+      this._debouncedRender();
+    } catch (error) {
+      console.error('TimelineEventHandler: Error in _handleResize:', error);
+    }
+  }
+
+  /**
+   * Registers a listener for a custom event type.
+   * @param {string} eventType - The type of event to listen for.
+   * @param {function} listener - The callback function to execute when the event is dispatched.
+   */
+  on(eventType, listener) {
+    if (!this._eventListeners[eventType]) {
+      this._eventListeners[eventType] = [];
+    }
+    if (!this._eventListeners[eventType].includes(listener)) {
+      this._eventListeners[eventType].push(listener);
+    }
+  }
+
+  /**
+   * Unregisters a listener for a custom event type.
+   * @param {string} eventType - The type of event.
+   * @param {function} listener - The callback function to remove.
+   */
+  off(eventType, listener) {
+    if (this._eventListeners[eventType]) {
+      this._eventListeners[eventType] = this._eventListeners[eventType].filter(
+        (registeredListener) => registeredListener !== listener
+      );
+      if (this._eventListeners[eventType].length === 0) {
+        delete this._eventListeners[eventType];
+      }
+    }
+  }
+
+  /**
+   * Dispatches a custom event to all registered listeners.
+   * @param {string} eventType - The type of event to dispatch.
+   * @param {object} [payload] - Optional data to pass to the listeners.
+   */
+  dispatchEvent(eventType, payload) {
+    if (this._eventListeners[eventType]) {
+      this._eventListeners[eventType].forEach((listener) => {
+        try {
+          listener(payload);
+        } catch (error) {
+          console.error(`Error in event listener for ${eventType}:`, error);
+        }
+      });
     }
   }
 
@@ -180,6 +225,8 @@ export class EventHandler {
       this.timelineContainerEl.removeEventListener('mousedown', this._handleNodeMouseDown.bind(this)); // Ensure correct bound function if used
     }
     
+    this._eventListeners = {}; // Clear custom event listeners
+
     // Remove global listeners if they happen to be active (shouldn't be if drag ended properly)
     document.removeEventListener('mousemove', this._boundHandleGlobalMouseMove);
     document.removeEventListener('mouseup', this._boundHandleGlobalMouseUp);
@@ -188,7 +235,7 @@ export class EventHandler {
       this._resizeObserver.disconnect();
       this._resizeObserver = null;
     }
-    // console.log('EventHandler listeners destroyed');
+    // console.log('TimelineEventHandler listeners destroyed');
   }
 }
 

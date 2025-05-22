@@ -98,4 +98,13 @@ export class TimelineDragHandler {
       document.body.style.cursor = TIMELINE_CONSTANTS.CURSOR_AUTO;
     }
   }
+
+  /**
+   * Checks if a drag operation is currently in progress.
+   * @returns {boolean} True if dragging, false otherwise.
+   */
+  isDragging() {
+    // The dragging state is managed on the timelineManager instance by this handler.
+    return this.timelineManager ? this.timelineManager.isDragging : false;
+  }
 } 

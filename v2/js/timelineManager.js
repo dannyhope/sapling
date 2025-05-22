@@ -5,6 +5,7 @@ import { TimelineNodeRenderer } from './timeline/timelineNodeRenderer.js';
 import { TimelineConnectionRenderer } from './timeline/timelineConnectionRenderer.js';
 import { TimelineDragHandler } from './timeline/timelineDragHandler.js';
 import { TimelineUtils } from './timeline/timelineUtils.js';
+import { TimelineEventHandler } from './timeline/timelineEventHandler.js';
 
 /**
  * @class TimelineManager
@@ -42,6 +43,7 @@ export class TimelineManager {
     this.nodeRenderer = null;
     this.branchRenderer = null;
     this.connectionRenderer = null;
+    this.eventHandler = null; // Added TimelineEventHandler property
 
     this._resizeObserver = new ResizeObserver(() => {
       // Guard to ensure components are initialized and timeline is visible
@@ -67,7 +69,7 @@ export class TimelineManager {
       this.versionControl,
       this._nodePositions,
       TimelineUtils.parseTransform,
-      this.dragHandler.handleNodeMouseDown.bind(this.dragHandler)
+      null // Placeholder for onNodeMouseDownCallback, as TimelineEventHandler will manage this.
     );
     this.branchRenderer = new TimelineBranchRenderer(
       this.versionControl,
@@ -84,13 +86,17 @@ export class TimelineManager {
       this._nodePositions,
       null // branchConnectionsGroup (set in render)
     );
+
+    // Initialize TimelineEventHandler after DragHandler is available
+    this.eventHandler = new TimelineEventHandler(this.timelineContainerEl, this, this.dragHandler);
+    this.eventHandler.initializeEventListeners(); // TimelineEventHandler sets up its own listeners (incl. resize)
   }
 
   /**
    * Renders the version history timeline.
    */
   render() {
-    if (!this.versionControl || !this.svgManager || !this.branchRenderer || !this.nodeRenderer || !this.connectionRenderer) {
+    if (!this.versionControl || !this.svgManager || !this.branchRenderer || !this.nodeRenderer || !this.connectionRenderer || !this.eventHandler) {
       // console.warn("TimelineManager.render() called before critical components are initialized or VersionControl is set.");
       return;
     }
@@ -126,28 +132,42 @@ export class TimelineManager {
     this.svgManager.adjustSvgViewbox(mainTimelineGroup, branchRenderData.maxXForViewBox, branchRenderData.maxYForViewBox);
   }
   
-  // _handleNodeMouseDown, handleDragMove, handleDragEnd are now managed by TimelineDragHandler
-  // _parseTransform is now in TimelineUtils
-  // _renderBranchConnections is now in TimelineConnectionRenderer
-
-  // Global event handlers in UIManager will call these methods on the dragHandler instance
   /**
-   * Delegates global 'mousemove' events to the drag handler.
-   * @param {MouseEvent} event - The mousemove event.
+   * Provides information about a node based on a mousedown event target.
+   * Used by TimelineEventHandler to get details for drag initiation.
+   * @param {MouseEvent} event - The mousedown event.
+   * @returns {{branchId: string, transactionIndex: number, nodeElement: SVGElement} | null} Node info or null.
    */
-  handleGlobalDragMove(event) {
-    if (this.dragHandler) {
-      this.dragHandler.handleDragMove(event);
+  getNodeInfoFromEvent(event) {
+    const hitArea = event.target.closest('.timeline-node-hit-area');
+    if (!hitArea) return null;
+
+    // Attempt to find the visual node. This depends on DOM structure set by TimelineNodeRenderer.
+    // Assumption: hitArea is a sibling to the visual node, or visual node is a specific child/sibling.
+    // Let's assume the hitArea's parent group also contains the .timeline-node circle.
+    const visualNode = hitArea.parentElement?.querySelector('.timeline-node'); 
+
+    if (visualNode && visualNode.dataset.compositeKey) {
+        const [branchId, indexStr] = visualNode.dataset.compositeKey.split('_');
+        const transactionIndex = parseInt(indexStr, 10);
+        if (branchId && !isNaN(transactionIndex)) {
+            return { branchId, transactionIndex, nodeElement: visualNode };
+        }
     }
+    console.warn("Could not extract node info from event", event.target);
+    return null;
   }
 
+  // Methods like isDragging() for TimelineDragHandler are now accessed directly 
+  // by TimelineEventHandler if needed, or managed internally by TimelineDragHandler.
+  // TimelineManager's role is less about direct event state and more about orchestration.
+
   /**
-   * Delegates global 'mouseup' events to the drag handler.
-   * @param {MouseEvent} event - The mouseup event.
+   * Gets the current dragging state from the DragHandler.
+   * Useful for other components if they need to know if a drag is active.
+   * @returns {boolean} True if a timeline drag is in progress.
    */
-  handleGlobalDragEnd(event) {
-    if (this.dragHandler) {
-      this.dragHandler.handleDragEnd(event);
-    }
+  isTimelineDragging() {
+    return this.dragHandler ? this.dragHandler.isDragging() : false;
   }
 } 
