@@ -111,6 +111,9 @@ import { VersionControl } from './js/versionControl.js';
       timelineManager.versionControl = versionControl;
       uiManager.versionControl = versionControl;
 
+      // Initialize TimelineManager's dependent components now that its versionControl is set
+      timelineManager.initializeDependentComponents();
+
       // Set up UI controls and global listeners
       uiManager.setupControls(controlsContainerSelector);
       uiManager.initGlobalEventListeners();

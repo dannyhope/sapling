@@ -93,7 +93,7 @@ export class UIManager {
    */
   _handleGlobalMouseMove(event) {
     if (this.timelineManager && this.timelineManager.isDragging) {
-      this.timelineManager.handleDragMove(event);
+      this.timelineManager.handleGlobalDragMove(event);
     }
   }
 
@@ -105,7 +105,7 @@ export class UIManager {
    */
   _handleGlobalMouseUp(event) {
     if (this.timelineManager && this.timelineManager.isDragging) {
-      this.timelineManager.handleDragEnd(event);
+      this.timelineManager.handleGlobalDragEnd(event);
     }
   }
 

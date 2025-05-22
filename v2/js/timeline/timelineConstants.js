@@ -1,0 +1,41 @@
+export const TIMELINE_CONSTANTS = {
+  SVG_NS: "http://www.w3.org/2000/svg",
+  NODE_RADIUS: 8,
+  ACTIVE_NODE_RADIUS: 10,
+  NODE_SPACING: 20,
+  HIT_AREA_HEIGHT: 50,
+  BRANCH_LABEL_OFFSET: 60,
+  BRANCH_VERTICAL_SPACING: 40,
+  DEFAULT_SVG_WIDTH: 800,
+  DEFAULT_SVG_HEIGHT: 100,
+  SVG_MIN_HEIGHT: "100px",
+  SVG_BORDER_STYLE: "1px solid #ccc",
+  MAIN_GROUP_INITIAL_TRANSLATE_X: 20, // Initial X translation for the main group
+  MAIN_GROUP_INITIAL_TRANSLATE_Y: 40, // Initial Y translation for the main group
+  VIEWBOX_PADDING: 20,
+  BRANCH_LABEL_FONT_SIZE: "18px",
+  BRANCH_LABEL_DX_OFFSET: "-15px",
+  BRANCH_LABEL_DY_OFFSET: "2px", // Vertical fine-tuning for branch label alignment
+  BRANCH_CONNECTIONS_GROUP_ID: "branch-connections-group",
+  BRANCH_NODES_GROUP_ID: "branch-nodes-group",
+  BRANCH_LABELS_GROUP_ID: "branch-labels-group",
+  MAIN_TIMELINE_GROUP_ID: "main-timeline-group",
+  NODE_STROKE_WIDTH: "1",
+  ACTIVE_NODE_STROKE_WIDTH: "2",
+  CONNECTION_LINE_STROKE_WIDTH: "1.5",
+  // Colors (using CSS variables where possible, but good to have them defined)
+  COLOR_GRAY: "var(--gray)",
+  COLOR_BLUE: "var(--blue)",
+  COLOR_LIGHT_GRAY: "var(--light-gray)",
+  COLOR_DARK_GRAY: "var(--dark-gray)",
+  COLOR_YELLOW: "var(--yellow)",
+  COLOR_GREEN: "var(--green)",
+  COLOR_RED: "var(--red)",
+  COLOR_BLUE_GRAY: "var(--blue-gray)",
+  COLOR_PURPLE: "var(--purple)",
+  CURSOR_EW_RESIZE: "ew-resize",
+  CURSOR_AUTO: "auto",
+  POINTER_EVENTS_NONE: "none",
+  POINTER_EVENTS_ALL: "all",
+  TEXT_ANCHOR_END: "end"
+}; 
