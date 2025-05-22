@@ -1,4 +1,6 @@
 # Text Version Control
+# sapling
+Quick branches
 
 A browser-based version control interface for text editing with an interactive timeline and branching support.
 
