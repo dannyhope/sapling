@@ -269,6 +269,18 @@ export class VersionControl {
     // The 'inferredType' for _commitOperation is mainly for message generation
     this._commitOperation(opArray, 'charDeleted', message || `Deleted character at index ${index}`);
   }
+
+  /**
+   * Record multiple character deletion action
+   * @param {number} startIndex - Index where deletion started
+   * @param {number} count - Number of characters deleted
+   * @param {string} [message] - Optional message
+   */
+  recordMultipleCharacterDeletion(startIndex, count, message) {
+    // Optimized op for multiple character deletion: [startIndex, count]
+    const opArray = [startIndex, count];
+    this._commitOperation(opArray, 'charsDeleted', message || `Deleted ${count} characters starting at index ${startIndex}`);
+  }
   
   /**
    * Get or create current branch

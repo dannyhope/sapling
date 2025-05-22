@@ -56,8 +56,13 @@ export class EditorManager {
       } else {
         console.warn(`Detected length increase by 1, but could not identify character. Cursor: ${cursorPosition}`);
       }
+    } else if (currentContent.length < previousContent.length) {
+      // Detect deletion (single or multiple characters, including from selection + backspace/delete)
+      const deletedCount = previousContent.length - currentContent.length;
+      const startIndex = cursorPosition; // Cursor is at the start of the deleted block after deletion
+      this.versionControl.recordMultipleCharacterDeletion(startIndex, deletedCount, 'Text deleted');
     } else {
-      // Fallback for complex changes (paste, multi-char input, replacements)
+      // Fallback for complex changes (paste, multi-char input, replacements not yet covered)
       console.warn(`Detected complex change. Type: ${event.inputType}, lengths: ${currentContent.length}/${previousContent.length}`);
     }
   }
@@ -72,13 +77,27 @@ export class EditorManager {
 
     const key = event.key;
     const cursorPosition = this.editorElement.selectionStart;
+    const selectionEnd = this.editorElement.selectionEnd;
+    const hasSelection = cursorPosition !== selectionEnd;
 
-    if (key === 'Backspace' && cursorPosition > 0) {
-      event.preventDefault();
-      this._handleDeletion(cursorPosition - 1, 'Backspace pressed');
-    } else if (key === 'Delete' && cursorPosition < this.editorElement.value.length) {
-      event.preventDefault();
-      this._handleDeletion(cursorPosition, 'Delete pressed');
+    if (key === 'Backspace') {
+      if (hasSelection) {
+        // Let browser handle deletion of selected text, _handleInput will catch it
+        return;
+      }
+      if (cursorPosition > 0) {
+        event.preventDefault();
+        this._handleDeletion(cursorPosition - 1, 'Backspace pressed');
+      }
+    } else if (key === 'Delete') {
+      if (hasSelection) {
+        // Let browser handle deletion of selected text, _handleInput will catch it
+        return;
+      }
+      if (cursorPosition < this.editorElement.value.length) {
+        event.preventDefault();
+        this._handleDeletion(cursorPosition, 'Delete pressed');
+      }
     }
   }
   
