@@ -1,13 +1,13 @@
 /**
- * @class UIManagerV2
+ * @class UIManager
  * @description Manages global UI elements, interactions and status display
  */
-export class UIManagerV2 {
+export class UIManager {
   /**
-   * Creates a UIManagerV2 instance
-   * @param {VersionControlV2} versionControl - Main version control instance
-   * @param {StorageManagerV2} storageManager - Storage manager instance
-   * @param {TimelineManagerV2} timelineManager - Timeline manager instance
+   * Creates a UIManager instance
+   * @param {VersionControl} versionControl - Main version control instance
+   * @param {StorageManager} storageManager - Storage manager instance
+   * @param {TimelineManager} timelineManager - Timeline manager instance
    */
   constructor(versionControl, storageManager, timelineManager) {
     this.versionControl = versionControl;
@@ -62,7 +62,7 @@ export class UIManagerV2 {
   }
 
   /**
-   * Handles global mousemove for timeline drag, delegating to TimelineManagerV2.
+   * Handles global mousemove for timeline drag, delegating to TimelineManager.
    * @private
    * @param {MouseEvent} event
    */
@@ -73,7 +73,7 @@ export class UIManagerV2 {
   }
 
   /**
-   * Handles global mouseup for timeline drag, delegating to TimelineManagerV2.
+   * Handles global mouseup for timeline drag, delegating to TimelineManager.
    * @private
    * @param {MouseEvent} event
    */
@@ -189,19 +189,6 @@ export class UIManagerV2 {
    */
   displayMessage(message, type = 'info') {
     console.log(`[${type.toUpperCase()}] ${message}`);
-    
-    // Future implementation: Display in UI instead of console
-    // const messageElement = document.getElementById('status-message');
-    // if (messageElement) {
-    //   messageElement.textContent = message;
-    //   messageElement.className = `status-message ${type}`;
-    //   
-    //   // Auto-hide after a delay
-    //   setTimeout(() => {
-    //     messageElement.textContent = '';
-    //     messageElement.className = 'status-message';
-    //   }, 3000);
-    // }
   }
 
   /**
@@ -233,10 +220,40 @@ export class UIManagerV2 {
     }
 
     const allBranchesData = this.versionControl.getAllBranchesData();
+
     if (allBranchesData && Object.keys(allBranchesData).length > 0) {
-      displayElement.textContent = JSON.stringify(allBranchesData, null, 2);
+      displayElement.textContent = this.formatJsonOutput(allBranchesData);
+
     } else {
       displayElement.textContent = "No branches or versions available.";
     }
   }
+
+  /**
+   * Formats a JSON object or string into a readable string representation.
+   * @param {Object|string} json - The JSON object or string to format.
+   * @returns {string} The formatted JSON string.
+   */
+  formatJsonOutput(json) {
+    if (typeof json === 'string') {
+      try {
+        json = JSON.parse(json);
+      } catch (error) {
+        console.error("Error parsing JSON string:", error);
+        return json;
+      }
+    }
+    const output = JSON.stringify(json, function(k, v) {
+      if (v instanceof Array) {
+        return JSON.stringify(v);
+      }
+      return v;
+    }, 2).replace(/\\/g, '')
+          .replace(/\"\[/g, '[')
+          .replace(/\]\"/g, ']')
+          .replace(/\"\{/g, '{')
+          .replace(/\}\"/g, '}');
+    return output;
+  }
+
 } 

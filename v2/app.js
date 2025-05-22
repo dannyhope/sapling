@@ -22,7 +22,7 @@
  *
  * Architectural Principles:
  * - Object-Oriented Design (OOP): The system is built using classes to encapsulate
- *   responsibilities (EditorManagerV2, TimelineManagerV2, StorageManagerV2, VersionContentStore, VersionControlV2),
+ *   responsibilities (EditorManager, TimelineManager, StorageManager, VersionContentStore, VersionControl),
  *   promoting modularity, reusability, and maintainability.
  * - Clear Separation of Concerns: Each class has a well-defined responsibility.
  *   `VersionContentStore` specifically handles the complex character-level data structure.
@@ -41,47 +41,47 @@
  * - Efficiency: Optimized for performance where critical, especially in DOM manipulation and data processing related to text input.
  */
 
-import { EditorManagerV2 } from './js/editorManager.js';
-import { TimelineManagerV2 } from './js/timelineManager.js';
-import { StorageManagerV2 } from './js/storageManager.js';
-import { UIManagerV2 } from './js/uiManager.js';
-import { VersionControlV2 } from './js/versionControl.js';
-// VersionContentStore is imported by VersionControlV2 directly.
+import { EditorManager } from './js/editorManager.js';
+import { TimelineManager } from './js/timelineManager.js';
+import { StorageManager } from './js/storageManager.js';
+import { UIManager } from './js/uiManager.js';
+import { VersionControl } from './js/versionControl.js';
+// VersionContentStore is imported by VersionControl directly.
 
 (function() {
   'use strict';
 
   /**
-   * @class TimelineManagerV2
+   * @class TimelineManager
    * @description Manages the rendering and interaction of the version history timeline.
    * This includes displaying branches, versions (nodes), and connections, and handling
    * user interactions on the timeline, such as navigating to a version or dragging.
    */
-  // class TimelineManagerV2 { ... } // Entire class removed
+  // class TimelineManager { ... } // Entire class removed
 
   /**
-   * @class StorageManagerV2
+   * @class StorageManager
    * @description Handles the persistence of version history and user preferences.
    * It can use localStorage for simple persistence or manage file export/import operations.
    */
-  // class StorageManagerV2 { ... } // Entire class removed
+  // class StorageManager { ... } // Entire class removed
 
   /**
-   * @class UIManagerV2
+   * @class UIManager
    * @description Manages global UI elements and interactions, such as buttons,
    * keyboard shortcuts, and modal dialogs. It orchestrates UI updates based on
-   * VersionControlV2 state changes and coordinates between different UI components.
+   * VersionControl state changes and coordinates between different UI components.
    */
-  // class UIManagerV2 { ... } // Entire class removed
+  // class UIManager { ... } // Entire class removed
 
   /**
-   * @class VersionControlV2
+   * @class VersionControl
    * @description The core logic unit for the version control system. It manages branches,
-   * versions, and the relationships between them. It coordinates with EditorManagerV2
-   * for text changes, TimelineManagerV2 for history visualization, and StorageManagerV2
+   * versions, and the relationships between them. It coordinates with EditorManager
+   * for text changes, TimelineManager for history visualization, and StorageManager
    * for data persistence.
    */
-  // class VersionControlV2 { ... } // Entire class removed
+  // class VersionControl { ... } // Entire class removed
 
 
   // --- Initialization ---
@@ -92,15 +92,15 @@ import { VersionControlV2 } from './js/versionControl.js';
 
     try {
       // Create manager instances
-      const storageManager = new StorageManagerV2();
+      const storageManager = new StorageManager();
       
       // Create managers with circular dependencies, which we'll resolve after creation
-      let editorManager = new EditorManagerV2(editorId, null);
-      let timelineManager = new TimelineManagerV2(timelineId, null);
-      let uiManager = new UIManagerV2(null, storageManager, timelineManager);
+      let editorManager = new EditorManager(editorId, null);
+      let timelineManager = new TimelineManager(timelineId, null);
+      let uiManager = new UIManager(null, storageManager, timelineManager);
 
       // Create version control as the central orchestrator
-      let versionControl = new VersionControlV2(
+      let versionControl = new VersionControl(
         editorManager,
         timelineManager,
         storageManager,
@@ -120,7 +120,7 @@ import { VersionControlV2 } from './js/versionControl.js';
       versionControl.init();
 
     } catch (error) {
-      console.error('Failed to initialize Text Version Control V2:', error);
+      console.error('Failed to initialize Text Version Control:', error);
       // Display user-friendly error message
       const body = document.querySelector('body');
       if (body) {

@@ -1,12 +1,12 @@
 /**
- * @class EditorManagerV2
+ * @class EditorManager
  * @description Manages text editor input/output and tracks character-level changes
  */
-export class EditorManagerV2 {
+export class EditorManager {
   /**
-   * Creates an EditorManagerV2 instance
+   * Creates an EditorManager instance
    * @param {string} editorId - ID of the textarea element
-   * @param {VersionControlV2} versionControl - Main version control instance
+   * @param {VersionControl} versionControl - Main version control instance
    * @throws {Error} If editor element not found
    */
   constructor(editorId, versionControl) {

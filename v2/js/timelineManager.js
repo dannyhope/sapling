@@ -1,12 +1,12 @@
 /**
- * @class TimelineManagerV2
+ * @class TimelineManager
  * @description Manages the visualization and interaction with version history timeline
  */
-export class TimelineManagerV2 {
+export class TimelineManager {
   /**
-   * Creates a TimelineManagerV2 instance
+   * Creates a TimelineManager instance
    * @param {string} timelineContainerId - ID of the container element
-   * @param {VersionControlV2} versionControl - Main version control instance
+   * @param {VersionControl} versionControl - Main version control instance
    * @throws {Error} If the timeline container element is not found
    */
   constructor(timelineContainerId, versionControl) {
@@ -16,16 +16,31 @@ export class TimelineManagerV2 {
     }
     this.versionControl = versionControl; // Will be set later if null
     this._svgNS = "http://www.w3.org/2000/svg";
-    this._nodePositions = {}; // For tracking node positions globally (svg coordinates)
+    this._nodePositions = {}; // Key: "{branchId}_{transactionIndex}", Value: { x, y, branchId, index }
     this.isDragging = false;
     this.dragTarget = null;
-    this._scrubberLine = null; // To hold the scrubber line element
     this._branchConnectionsGroup = null; // Group for connection lines
     this._maxRenderedXForViewBox = 0; // Max X coordinate reached by any node
     this._maxRenderedYForViewBox = 0; // Max Y coordinate for vertical stacking
-    this._branchLabelOffset = 20; // Space for branch labels
+    this._branchLabelOffset = 60; // Increased space for branch labels
     this._branchNodesGroup = null; // Group for all branch nodes
     this._branchLabelsGroup = null; // Group for all branch labels
+
+    // Node styling and layout properties
+    this._nodeRadius = 7;
+    this._activeNodeRadius = 9;
+    this._nodeSpacing = 18;
+    this._hitAreaHeight = 75; // User-defined hit area height
+    // _hitAreaWidth will be based on _nodeSpacing
+
+    // Add ResizeObserver for responsiveness
+    this._resizeObserver = new ResizeObserver(() => {
+      if (this.versionControl && this.timelineContainerEl.offsetParent !== null) { // Check if element is visible
+        // console.log("TimelineManager: Resizing detected, re-rendering.");
+        this.render();
+      }
+    });
+    this._resizeObserver.observe(this.timelineContainerEl);
   }
 
   /**
@@ -36,6 +51,7 @@ export class TimelineManagerV2 {
       console.warn("Timeline: VersionControl not set, skipping render");
       return;
     }
+    console.log("Timeline.render: Start. VC present.", this.versionControl);
     
     this._clearTimeline();
     this._nodePositions = {}; // Reset node positions on each render
@@ -66,7 +82,6 @@ export class TimelineManagerV2 {
     
     this._adjustSvgViewbox(svg);
     this.timelineContainerEl.appendChild(svg);
-    this._updateScrubberLinePosition(); // Ensure scrubber is updated after render
   }
   
   /**
@@ -91,14 +106,14 @@ export class TimelineManagerV2 {
     svg.style.minHeight = "100px"; // Ensure a minimum height
 
     // Create the scrubber line here and add it to the SVG
-    this._scrubberLine = document.createElementNS(this._svgNS, "line");
-    this._scrubberLine.setAttribute("stroke", "var(--red)");
-    this._scrubberLine.setAttribute("stroke-width", "1.5");
-    this._scrubberLine.setAttribute("y1", "0"); // Top of SVG
-    this._scrubberLine.setAttribute("y2", "100"); // Bottom of SVG (assuming height 100)
-    this._scrubberLine.style.visibility = 'hidden'; // Initially hidden
-    this._scrubberLine.style.pointerEvents = 'none'; // Ensure it doesn't interfere with mouse events
-    svg.appendChild(this._scrubberLine);
+    // this._scrubberLine = document.createElementNS(this._svgNS, "line");
+    // this._scrubberLine.setAttribute("stroke", "var(--red)");
+    // this._scrubberLine.setAttribute("stroke-width", "1.5");
+    // this._scrubberLine.setAttribute("y1", "0"); // Top of SVG
+    // this._scrubberLine.setAttribute("y2", "100"); // Bottom of SVG (assuming height 100)
+    // this._scrubberLine.style.visibility = 'hidden'; // Initially hidden
+    // this._scrubberLine.style.pointerEvents = 'none'; // Ensure it doesn't interfere with mouse events
+    // svg.appendChild(this._scrubberLine);
 
     return svg;
   }
@@ -111,16 +126,22 @@ export class TimelineManagerV2 {
   _renderBranches(mainTimelineGroup) {
     const allBranchesData = this.versionControl.getAllBranchesData();
     const currentBranchIdFromVC = this.versionControl._currentBranchId;
-    const currentVersionId = this.versionControl._currentVersionId;
+    const currentTransactionIndexFromVC = this.versionControl._currentTransactionIndex;
 
     const branchRenderOrder = this._determineBranchRenderOrder(allBranchesData);
+    console.log("Timeline._renderBranches: Data: ", { allBranchesData, currentBranchIdFromVC, currentTransactionIndexFromVC, branchRenderOrder });
     
     let yBranchOffset = 0;
     const branchVerticalSpacing = 40; // Vertical space between branches
 
+    // Store min/max Y for scrubber alignment relative to mainTimelineGroup content
+    this._minContentYInMainGroup = Infinity;
+    this._maxContentYInMainGroup = -Infinity;
+
     for (const branchId of branchRenderOrder) {
       const branchData = allBranchesData[branchId];
-      if (branchData && branchData.versions) {
+      console.log(`Timeline._renderBranches: Processing branchId: ${branchId}`, branchData);
+      if (branchData && branchData.transactions !== undefined && branchData.initialContent !== undefined) {
         // Create a group for each branch's versions
         const branchVersionsGroup = document.createElementNS(this._svgNS, "g");
         branchVersionsGroup.setAttribute("id", `branch-group-${branchId}`);
@@ -128,10 +149,14 @@ export class TimelineManagerV2 {
         // Append to the dedicated nodes group instead of mainTimelineGroup directly
         this._branchNodesGroup.appendChild(branchVersionsGroup);
 
+        const branchLabelY = yBranchOffset + 5; // Consistent Y for label and nodes in this row
+
         const branchLabel = document.createElementNS(this._svgNS, "text");
-        branchLabel.setAttribute("x", "-15"); 
-        branchLabel.setAttribute("y", (yBranchOffset + 5).toString()); 
-        branchLabel.setAttribute("font-size", "10px");
+        branchLabel.setAttribute("x", "0");
+        branchLabel.setAttribute("text-anchor", "end");
+        branchLabel.setAttribute("dx", "-15px"); // Shift text 15px left of node line start
+        branchLabel.setAttribute("y", branchLabelY.toString()); 
+        branchLabel.setAttribute("font-size", "14px"); // Increased font size
         branchLabel.setAttribute("fill", "var(--gray)");
         branchLabel.textContent = branchId;
         if (branchId === currentBranchIdFromVC) {
@@ -141,17 +166,28 @@ export class TimelineManagerV2 {
         // Add label to the dedicated labels group
         this._branchLabelsGroup.appendChild(branchLabel);
 
-        this._renderBranchVersions(
-          branchVersionsGroup, // Pass the specific group for this branch's versions
-          branchId, // Pass branchId for hit areas and node storage
-          branchData.versions, 
-          currentVersionId,
-          0 // Initial xOffset within this branch group will be 0
+        this._renderBranchStates(
+          branchVersionsGroup, 
+          branchId, 
+          branchData, // Pass full branchData including initialContent and transactions
+          currentBranchIdFromVC,
+          currentTransactionIndexFromVC,
+          0, // Initial xOffset within this branch group will be 0
+          branchLabelY // Pass the Y offset for nodes in this branch row
         );
         yBranchOffset += branchVerticalSpacing;
+        // Update min/max content Y based on this branch's label Y (which is where nodes are centered)
+        this._minContentYInMainGroup = Math.min(this._minContentYInMainGroup, branchLabelY);
+        this._maxContentYInMainGroup = Math.max(this._maxContentYInMainGroup, branchLabelY);
       }
     }
-    this._maxRenderedYForViewBox = Math.max(100, yBranchOffset + 20); // Add some padding
+    // this._maxRenderedYForViewBox = Math.max(100, yBranchOffset + 20); // Add some padding
+    // Use the actual content height for viewBox calculation
+    if (Object.keys(allBranchesData).length > 0) {
+        this._maxRenderedYForViewBox = Math.max(100, this._maxContentYInMainGroup + branchVerticalSpacing); // Add padding below last branch
+    } else {
+        this._maxRenderedYForViewBox = 100; // Default if no branches
+    }
   }
 
   /**
@@ -163,139 +199,191 @@ export class TimelineManagerV2 {
    */
   _determineBranchRenderOrder(allBranchesData) {
     const branchIds = Object.keys(allBranchesData);
-    // Simple sort: 'main' first, then alphabetically.
+    // Simple sort: 'main' first, then others.
     return branchIds.sort((a, b) => {
       if (a === 'main') return -1;
       if (b === 'main') return 1;
-      // Fallback for non-main branches (e.g. alphabetical or by creation time if available)
-      // For now, just alphabetical for non-main
-      const aTimestamp = allBranchesData[a].versions[0]?.timestamp || 0;
-      const bTimestamp = allBranchesData[b].versions[0]?.timestamp || 0;
-      if (aTimestamp !== bTimestamp) {
-        return aTimestamp - bTimestamp;
+      
+      // For non-main branches, sort by their creation point (parent's transaction index or an equivalent time metric if available)
+      // This is a simplified sort. A true chronological sort across branches is complex.
+      // We might need to store a creation timestamp on the branch object itself for better sorting.
+      const branchAData = allBranchesData[a];
+      const branchBData = allBranchesData[b];
+
+      // Fallback: if parentTransactionIndex is available and on the same parent branch, use that.
+      // This is a heuristic and might not be perfect for complex multi-level branching.
+      if (branchAData.parentBranchId === branchBData.parentBranchId && 
+          branchAData.parentBranchId !== null) {
+            if (branchAData.parentTransactionIndex !== branchBData.parentTransactionIndex) {
+                return branchAData.parentTransactionIndex - branchBData.parentTransactionIndex;
+            }
       }
-      return a.localeCompare(b);
+      // Fallback to comparing initial transaction timestamps if available (ephemeral though)
+      // Or branch ID as last resort for stability
+      return a.localeCompare(b); 
     });
   }
   
   /**
-   * Renders the versions of a branch
+   * Renders the states (initialContent + transactions) of a branch.
    * @private
-   * @param {SVGElement} branchVersionsGroup - The SVG group specific to this branch's versions.
+   * @param {SVGElement} branchStateGroup - The SVG group specific to this branch's states.
    * @param {string} branchId - The ID of the current branch being rendered.
-   * @param {Array} versions - The versions to render for this branch.
-   * @param {string} currentVersionId - The overall current version ID (from VersionControl).
+   * @param {object} branchData - The full data object for this branch.
+   * @param {string} currentGlobalBranchId - The overall current branch ID (from VersionControl).
+   * @param {number} currentGlobalTransactionIndex - The overall current transaction index (from VC).
    * @param {number} initialXOffset - The starting X offset for the first node in this branch group.
+   * @param {number} yPos - The Y position for nodes in this branch row.
    */
-  _renderBranchVersions(branchVersionsGroup, branchId, versions, currentVersionId, initialXOffset) {
+  _renderBranchStates(branchStateGroup, branchId, branchData, currentGlobalBranchId, currentGlobalTransactionIndex, initialXOffset, yPos) {
+    console.log(`Timeline._renderBranchStates: branchId=${branchId}, initialXOffset=${initialXOffset}, yPos=${yPos}`, { branchData, currentGlobalBranchId, currentGlobalTransactionIndex });
     let xOffset = initialXOffset;
-    const nodeRadius = 4;
-    const nodeSpacing = 12;
-    const hitAreaHeight = 30; // Height of the hit area
-    const hitAreaWidth = nodeSpacing; // Width of the hit area, ensure it's wide enough
+    const hitAreaWidth = this._nodeSpacing; 
 
-    versions.forEach((version, index) => {
-      const isCurrent = version.id === currentVersionId && branchId === this.versionControl.findBranchOfVersion(version.id);
-      const visualNode = this._createVersionNode(
-        xOffset, // x is relative to the branchVersionsGroup
-        0,       // y is 0 within the branchVersionsGroup
-        nodeRadius,
-        version,
-        isCurrent 
+    // 1. Render node for initialContent state (index -1)
+    const initialStateInfo = this.versionControl.getStateInfoAt(branchId, -1);
+    console.log(`Timeline._renderBranchStates: Initial state info for ${branchId}_-1:`, initialStateInfo);
+    if (initialStateInfo) {
+      const isCurrentInitial = branchId === currentGlobalBranchId && currentGlobalTransactionIndex === -1;
+      const initialNodeCompositeKey = `${branchId}_-1`;
+      const initialVisualNode = this._createVisualNode(
+        xOffset, 
+        0, // Y is relative to branchStateGroup, which is already at yPos
+        isCurrentInitial ? this._activeNodeRadius : this._nodeRadius, // Use active radius if current
+        initialStateInfo, // Contains type, message etc.
+        isCurrentInitial
       );
-      visualNode.style.pointerEvents = 'auto'; // Ensure visual node can be clicked if needed
-      visualNode.classList.add('timeline-node'); // For potential styling
+      initialVisualNode.dataset.compositeKey = initialNodeCompositeKey;
 
-      // Create hit area
-      const hitArea = document.createElementNS(this._svgNS, "rect");
-      hitArea.setAttribute("x", (xOffset - hitAreaWidth / 2 + nodeRadius / 2).toString()); // Centered on node
-      hitArea.setAttribute("y", (-hitAreaHeight / 2).toString());
-      hitArea.setAttribute("width", hitAreaWidth.toString());
-      hitArea.setAttribute("height", hitAreaHeight.toString());
-      hitArea.setAttribute("fill", "transparent"); // Make it invisible
-      hitArea.style.pointerEvents = 'all'; // Capture all mouse events
-      hitArea.style.cursor = 'ew-resize'; // Indicate draggable
-      hitArea.classList.add('timeline-node-hit-area');
-
-      // Add mousedown listener for dragging to the hit area
-      hitArea.addEventListener('mousedown', (e) => this._handleNodeMouseDown(e, branchId, index, visualNode, versions));
+      const initialHitArea = this._createHitArea(xOffset, this._nodeRadius, hitAreaWidth, this._hitAreaHeight);
+      console.log(`Timeline._renderBranchStates: Created initial node for ${initialNodeCompositeKey}:`, {initialVisualNode, initialHitArea});
+      initialHitArea.addEventListener('mousedown', (e) => this._handleNodeMouseDown(e, branchId, -1, initialVisualNode));
       
-      // Add click listener to the visual node itself for simple navigation
-      visualNode.addEventListener('click', () => {
-        if (!this.isDragging && this.versionControl) { 
-            this.versionControl.switchToVersion(branchId, version.id);
-        }
-      });
-      
-      // Append hit area first, then visual node (so visual node's tooltip works)
-      branchVersionsGroup.appendChild(hitArea);
-      branchVersionsGroup.appendChild(visualNode);
+      branchStateGroup.appendChild(initialHitArea);
+      branchStateGroup.appendChild(initialVisualNode);
 
-      // Store GLOBAL position for connections and scrubber.
-      // Must account for the mainTimelineGroup's transform and this branchVersionsGroup's transform.
       const mainTimelineGroupTransform = this._parseTransform(document.getElementById("main-timeline-group")?.getAttribute("transform"));
-      const branchGroupTransform = this._parseTransform(branchVersionsGroup.getAttribute("transform"));
+      const branchGroupTransform = this._parseTransform(branchStateGroup.getAttribute("transform"));
+      const globalXInitial = xOffset + mainTimelineGroupTransform.translateX + branchGroupTransform.translateX;
+      const globalYInitial = 0 + mainTimelineGroupTransform.translateY + branchGroupTransform.translateY;
       
+      this._nodePositions[initialNodeCompositeKey] = { x: globalXInitial, y: globalYInitial, branchId: branchId, index: -1 };
+      this._maxRenderedXForViewBox = Math.max(this._maxRenderedXForViewBox, globalXInitial + this._nodeRadius + this._branchLabelOffset);
+      xOffset += this._nodeSpacing;
+    }
+
+    // 2. Render nodes for each transaction
+    branchData.transactions.forEach((opArray, txIndex) => {
+      const stateInfo = this.versionControl.getStateInfoAt(branchId, txIndex);
+      console.log(`Timeline._renderBranchStates: Transaction state info for ${branchId}_${txIndex}:`, stateInfo);
+      if (!stateInfo) {
+        console.warn(`Could not get state info for ${branchId} at index ${txIndex}`);
+        return;
+      }
+
+      const isCurrentTransaction = branchId === currentGlobalBranchId && txIndex === currentGlobalTransactionIndex;
+      const nodeCompositeKey = `${branchId}_${txIndex}`;
+
+      const visualNode = this._createVisualNode(
+        xOffset, 
+        0, // Y is relative to branchStateGroup
+        isCurrentTransaction ? this._activeNodeRadius : this._nodeRadius, // Use active radius if current
+        stateInfo, // Contains type, message etc.
+        isCurrentTransaction 
+      );
+      visualNode.dataset.compositeKey = nodeCompositeKey;
+
+      const hitArea = this._createHitArea(xOffset, this._nodeRadius, hitAreaWidth, this._hitAreaHeight);
+      console.log(`Timeline._renderBranchStates: Created transaction node for ${nodeCompositeKey}:`, {visualNode, hitArea});
+      hitArea.addEventListener('mousedown', (e) => this._handleNodeMouseDown(e, branchId, txIndex, visualNode));
+      
+      branchStateGroup.appendChild(hitArea);
+      branchStateGroup.appendChild(visualNode);
+
+      const mainTimelineGroupTransform = this._parseTransform(document.getElementById("main-timeline-group")?.getAttribute("transform"));
+      const branchGroupTransform = this._parseTransform(branchStateGroup.getAttribute("transform"));
       const globalX = xOffset + mainTimelineGroupTransform.translateX + branchGroupTransform.translateX;
-      const globalY = 0 + mainTimelineGroupTransform.translateY + branchGroupTransform.translateY; // y is 0 within branch group
+      const globalY = 0 + mainTimelineGroupTransform.translateY + branchGroupTransform.translateY;
 
-      this._nodePositions[version.id] = { x: globalX, y: globalY, branchId: branchId };
-      this._maxRenderedXForViewBox = Math.max(this._maxRenderedXForViewBox, globalX + nodeRadius + this._branchLabelOffset);
+      this._nodePositions[nodeCompositeKey] = { x: globalX, y: globalY, branchId: branchId, index: txIndex };
+      this._maxRenderedXForViewBox = Math.max(this._maxRenderedXForViewBox, globalX + this._nodeRadius + this._branchLabelOffset);
 
-      xOffset += nodeSpacing;
+      xOffset += this._nodeSpacing;
     });
-
-    // this._finalXOffset is no longer suitable for global viewbox calculation with multiple branches.
-    // We use _maxRenderedXForViewBox instead.
   }
   
   /**
-   * Creates a version node (circle)
+   * Creates a visual timeline node (circle) and its tooltip.
    * @private
-   * @param {number} x - X coordinate
-   * @param {number} y - Y coordinate
-   * @param {number} radius - Circle radius
-   * @param {object} version - Version data
-   * @param {boolean} isCurrent - Whether this is the current version
-   * @returns {SVGElement} The created circle element
+   * @param {number} x - X coordinate relative to its parent group.
+   * @param {number} y - Y coordinate relative to its parent group.
+   * @param {number} radius - Circle radius.
+   * @param {object} stateInfo - Object from versionControl.getStateInfoAt(), contains type, message.
+   * @param {boolean} isCurrent - Whether this is the current state.
+   * @returns {SVGElement} The created circle SVGElement.
    */
-  _createVersionNode(x, y, radius, version, isCurrent) {
+  _createVisualNode(x, y, radius, stateInfo, isCurrent) {
     const circle = document.createElementNS(this._svgNS, "circle");
     circle.setAttribute("cx", x.toString());
     circle.setAttribute("cy", y.toString());
     circle.setAttribute("r", radius.toString());
     
-    // Set visual appearance based on version type
     let fillColor = 'var(--light-gray)';
     let strokeColor = 'var(--dark-gray)';
     let strokeWidth = '1';
     
-    switch (version.type) {
-      case 'charTyped':
-        fillColor = 'var(--green)';
-        break;
-      case 'charDeleted':
-        fillColor = 'var(--red)';
-        break;
-    }
-    
     if (isCurrent) {
-      strokeColor = 'var(--blue)';
-      strokeWidth = '2.5';
+      fillColor = 'var(--yellow)'; // Bright yellow for active node
+      strokeColor = 'var(--dark-gray)'; // Darker border for active node
+      strokeWidth = '2'; // Thicker border for active node
+    } else {
+      // stateInfo.type is inferred by VersionControl (e.g., 'charTyped', 'charDeleted', 'initial', 'branch_created')
+      switch (stateInfo.type) {
+        case 'charTyped':
+          fillColor = 'var(--green)';
+          break;
+        case 'charDeleted':
+          fillColor = 'var(--red)';
+          break;
+        case 'initial':
+          fillColor = 'var(--blue-gray)'; // A distinct color for true initial states
+          break;
+        case 'branch_created':
+          fillColor = 'var(--purple)'; // A distinct color for branch points (initial content of a new branch)
+          break;
+      }
     }
     
     circle.setAttribute("fill", fillColor);
     circle.setAttribute("stroke", strokeColor);
     circle.setAttribute("stroke-width", strokeWidth);
-    circle.style.pointerEvents = 'auto'; // Explicitly allow pointer events on the circle itself
+    circle.style.pointerEvents = 'none'; // Visual nodes should not capture pointer events
+    circle.classList.add('timeline-node');
     
-    // Add tooltip
     const title = document.createElementNS(this._svgNS, "title");
-    title.textContent = `Version: ${version.id.substring(0,8)}... (${version.type})
-${version.message || ''}`;
+    // stateInfo.id is {branchId, index}, stateInfo.message is generated by VersionControl
+    const opDisplay = stateInfo.op ? `Op: [${stateInfo.op.join(',')}]` : "Initial State";
+    title.textContent = `State: ${stateInfo.id.branchId} @ index ${stateInfo.id.index}\n${stateInfo.message || ''}\n${opDisplay}`;
     circle.appendChild(title);
     
     return circle;
+  }
+
+  /**
+   * Creates an invisible hit area rectangle for a node.
+   * @private
+   */
+  _createHitArea(nodeX, nodeRadius, hitAreaWidth, hitAreaHeight) {
+      const hitArea = document.createElementNS(this._svgNS, "rect");
+      hitArea.setAttribute("x", (nodeX - hitAreaWidth / 2).toString()); // Centered hit area
+      hitArea.setAttribute("y", (-hitAreaHeight / 2).toString());
+      hitArea.setAttribute("width", hitAreaWidth.toString());
+      hitArea.setAttribute("height", hitAreaHeight.toString());
+      hitArea.setAttribute("fill", "transparent");
+      hitArea.style.pointerEvents = 'all';
+      hitArea.style.cursor = 'ew-resize';
+      hitArea.classList.add('timeline-node-hit-area');
+      return hitArea;
   }
   
   /**
@@ -330,24 +418,35 @@ ${version.message || ''}`;
    * @private
    * @param {MouseEvent} event - The mouse event.
    * @param {string} branchId - The ID of the branch containing the node.
-   * @param {number} versionIndex - The index of the version (node) in the versions array.
+   * @param {number} transactionIndex - The transaction index of the state (-1 for initialContent).
    * @param {SVGElement} nodeElement - The SVG element of the node.
-   * @param {Array} versions - The array of versions for the current branch.
    */
-  _handleNodeMouseDown(event, branchId, versionIndex, nodeElement, versions) {
+  _handleNodeMouseDown(event, branchId, transactionIndex, nodeElement) {
     event.preventDefault();
     event.stopPropagation();
 
     if (!this.versionControl) return;
 
     this.isDragging = true;
+    // To determine the list of draggable states for this branch, we need to know its transactions.
+    const branchData = this.versionControl.getBranchData(branchId);
+    if (!branchData) {
+        console.error("Could not get branch data for drag start.");
+        this.isDragging = false;
+        return;
+    }
+
+    // Create a list of draggable indices: -1 for initial, then 0 to N-1 for transactions
+    const draggableIndices = [-1, ...branchData.transactions.map((_, i) => i)];
+    const currentDragStartIndexOnList = draggableIndices.indexOf(transactionIndex);
+
     this.dragTarget = {
       branchId: branchId,
-      startIndex: versionIndex, // Store the index in the versions array
-      currentIndex: versionIndex,
+      currentBranchDraggableIndices: draggableIndices, // List of valid indices for this branch
+      currentDragStartIndexOnList: currentDragStartIndexOnList, // Index IN `draggableIndices` list
+      currentDragListIndex: currentDragStartIndexOnList, // Current position IN `draggableIndices` list during drag
       element: nodeElement,
       startX: event.clientX,
-      versions: versions // Store the versions array for easy access
     };
     document.body.style.cursor = 'ew-resize';
   }
@@ -361,26 +460,20 @@ ${version.message || ''}`;
     if (!this.isDragging || !this.dragTarget || !this.versionControl) return;
 
     const deltaX = event.clientX - this.dragTarget.startX;
-    const nodeSpacing = 12; // Same as in _renderBranchVersions
-    // Calculate version delta based on drag distance.
-    // A larger divisor means user has to drag farther to change versions.
-    // Changed from (nodeSpacing * 0.5) to nodeSpacing for less sensitivity.
-    const versionDelta = Math.floor(deltaX / nodeSpacing);
+    const versionDelta = Math.floor(deltaX / this._nodeSpacing);
 
+    const draggableIndices = this.dragTarget.currentBranchDraggableIndices;
+    if (!draggableIndices || draggableIndices.length === 0) return;
 
-    const versions = this.dragTarget.versions;
-    if (!versions || versions.length === 0) return;
+    let newDragListIndex = this.dragTarget.currentDragStartIndexOnList + versionDelta;
+    newDragListIndex = Math.max(0, Math.min(draggableIndices.length - 1, newDragListIndex));
 
-    let newVersionIndex = this.dragTarget.startIndex + versionDelta;
-    newVersionIndex = Math.max(0, Math.min(versions.length - 1, newVersionIndex));
-
-    if (newVersionIndex !== this.dragTarget.currentIndex) {
-      this.dragTarget.currentIndex = newVersionIndex;
-      const targetVersion = versions[newVersionIndex];
-      if (targetVersion) {
-        this.versionControl.switchToVersion(this.dragTarget.branchId, targetVersion.id);
-        // switchToVersion will call _updateUI, which calls timelineManager.render(), 
-        // which in turn calls _updateScrubberLinePosition().
+    if (newDragListIndex !== this.dragTarget.currentDragListIndex) {
+      this.dragTarget.currentDragListIndex = newDragListIndex;
+      const targetTransactionIndex = draggableIndices[newDragListIndex]; // Get actual transactionIndex (-1, 0, 1...)
+      
+      if (targetTransactionIndex !== undefined) {
+        this.versionControl.switchToVersion(this.dragTarget.branchId, targetTransactionIndex);
       }
     }
   }
@@ -393,44 +486,18 @@ ${version.message || ''}`;
   handleDragEnd(event) {
     if (this.isDragging) {
       this.isDragging = false;
+      // If there was a drag target, switch to its final determined version.
+      // This handles both true drags and simple clicks (mousedown -> mouseup).
+      if (this.dragTarget && this.versionControl) {
+        const finalBranchId = this.dragTarget.branchId;
+        const finalTransactionIndex = this.dragTarget.currentBranchDraggableIndices[this.dragTarget.currentDragListIndex];
+        if (finalTransactionIndex !== undefined) {
+            this.versionControl.switchToVersion(finalBranchId, finalTransactionIndex);
+        }
+      }
       this.dragTarget = null;
       document.body.style.cursor = 'auto';
-      // Optional: Force a re-render if needed, though switchToVersion should handle it.
-      // if (this.versionControl) this.render();
-    }
-  }
-
-  /**
-   * Updates the position and visibility of the scrubber line.
-   * @private
-   */
-  _updateScrubberLinePosition() {
-    if (!this.versionControl || !this._scrubberLine) return;
-
-    const currentVersionId = this.versionControl._currentVersionId;
-    if (currentVersionId && this._nodePositions[currentVersionId]) {
-      const nodePos = this._nodePositions[currentVersionId];
-      
-      // The nodePos.x and nodePos.y are already global SVG coordinates.
-      // The scrubber line is a direct child of the SVG, so no further complex transform needed.
-      this._scrubberLine.setAttribute("x1", nodePos.x.toString());
-      this._scrubberLine.setAttribute("x2", nodePos.x.toString());
-      // Set y1 and y2 to span the height of the SVG's viewBox
-      const viewBox = this._scrubberLine.ownerSVGElement.getAttribute('viewBox');
-      if (viewBox) {
-          const [,, vbWidth, vbHeight] = viewBox.split(' ').map(parseFloat);
-          this._scrubberLine.setAttribute("y1", "0");
-          this._scrubberLine.setAttribute("y2", vbHeight.toString());
-      } else { // fallback
-          this._scrubberLine.setAttribute("y1", "0");
-          this._scrubberLine.setAttribute("y2", "100%"); // Fallback, might not be ideal
-      }
-      this._scrubberLine.style.visibility = 'visible';
-    } else {
-      this._scrubberLine.style.visibility = 'hidden';
-      if (currentVersionId) {
-          console.warn(`Scrubber: Node position for current version ${currentVersionId} not found.`);
-      }
+      // No need to update scrubber line anymore
     }
   }
 
@@ -465,10 +532,14 @@ ${version.message || ''}`;
 
     for (const branchId in allBranchesData) {
       const branchData = allBranchesData[branchId];
-      if (branchData.parent && branchData.parent.versionId && branchData.versions.length > 0) {
-        const parentVersionPos = this._nodePositions[branchData.parent.versionId];
-        // The child connection point is the first version of the current branch.
-        const childVersionPos = this._nodePositions[branchData.versions[0].id];
+      // Connect if it has a parentBranchId and a defined parentTransactionIndex
+      if (branchData.parentBranchId && typeof branchData.parentTransactionIndex === 'number') {
+        const parentNodeKey = `${branchData.parentBranchId}_${branchData.parentTransactionIndex}`;
+        const parentVersionPos = this._nodePositions[parentNodeKey];
+        
+        // The child connection point is ALWAYS the initialContent state (-1) of the current branch.
+        const childNodeKey = `${branchId}_-1`; 
+        const childVersionPos = this._nodePositions[childNodeKey];
 
         if (parentVersionPos && childVersionPos) {
           const line = document.createElementNS(this._svgNS, "path");
@@ -493,7 +564,7 @@ ${version.message || ''}`;
           line.setAttribute("fill", "none");
           this._branchConnectionsGroup.appendChild(line);
         } else {
-          console.warn(`Timeline: Could not find positions for connection between parent ${branchData.parent.versionId} and child branch ${branchId} (first version ${branchData.versions[0]?.id})`);
+          console.warn(`Timeline: Could not find positions for connection. Parent: ${parentNodeKey}, Child: ${childNodeKey}`);
         }
       }
     }

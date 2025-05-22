@@ -1,13 +1,13 @@
 /**
- * @class StorageManagerV2
+ * @class StorageManager
  * @description Handles data persistence of version history and user preferences
  */
-export class StorageManagerV2 {
+export class StorageManager {
   /**
-   * Creates a StorageManagerV2 instance
-   * @param {string} [localStorageKey='textVersionControlV2'] - Key for localStorage
+   * Creates a StorageManager instance
+   * @param {string} [localStorageKey='textVersionControl'] - Key for localStorage
    */
-  constructor(localStorageKey = 'textVersionControlV2') {
+  constructor(localStorageKey = 'textVersionControl') {
     this._storageKey = localStorageKey;
   }
 

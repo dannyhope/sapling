@@ -1,0 +1,73 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Project Overview
+
+This project is a client-side text version control system designed to be robust, modular, and well-documented, running directly within the browser. It aims to provide a seamless experience for users to track changes to text content, visualize version history, manage branches, and navigate through different versions of their work.
+
+## Directory Structure
+
+- **[/v1](mdc:v1)**: Contains an early version of the project. This directory **should not be modified**, though its contents can be read and referenced for historical context or comparison.
+- **[/v2](mdc:v2)**: Contains the refactored and **current working version** of the project. All active development and modifications should occur within this directory.
+
+## Technology Stack & Key Files
+
+This project is built using core web technologies with no external libraries or frameworks:
+
+- **HTML**: For the application structure.
+    - V1 Entry Point: [/v1/index.html](mdc:v1/index.html)
+    - V2 Entry Point: [/v2/index-v2.html](mdc:v2/index-v2.html)
+- **CSS**: For styling.
+    - V1 Styles: [/v1/style.css](mdc:v1/style.css)
+    - V2 Styles: [/v2/style-v2.css](mdc:v2/style-v2.css)
+- **JavaScript (Vanilla JS)**: For all client-side logic.
+    - V1 Logic: Primarily in [/v1/app.js](mdc:v1/app.js)
+    - V2 Logic (Modularized): Main file [/v2/app-v2.js](mdc:v2/app-v2.js) and modules within the [/v2/js/](mdc:v2/js) directory:
+        - [/v2/js/editorManager.js](mdc:v2/js/editorManager.js)
+        - [/v2/js/timelineManager.js](mdc:v2/js/timelineManager.js)
+        - [/v2/js/storageManager.js](mdc:v2/js/storageManager.js)
+        - [/v2/js/uiManager.js](mdc:v2/js/uiManager.js)
+        - [/v2/js/versionControl.js](mdc:v2/js/versionControl.js)
+        - [/v2/js/versionContentStore.js](mdc:v2/js/versionContentStore.js)
+- **Configuration**:
+    - V1 Config: [/v1/config.js](mdc:v1/config.js)
+    - V2 Config: [/v2/config-v2.js](mdc:v2/config-v2.js)
+
+## Core Functionality Focus (V2)
+
+Refer to [/v2/app-v2.js](mdc:v2/app-v2.js) for more detailed explanations of these features.
+
+- **Text Input Management**: Granular capture of single character typing and deletions.
+- **Version Creation**: Character-level history recording using `VersionContentStore`.
+- **History Visualization**: Interactive timeline for versions and branches.
+- **Branch Management**: Creation, switching, and management of development branches.
+- **Version Navigation**: Viewing and reverting to previous text states.
+- **Data Persistence**: Use of `localStorage`; file export/import is scaffolded.
+
+## Architectural Principles (V2)
+
+- **Object-Oriented Design (OOP)**: Classes encapsulate responsibilities (e.g., `EditorManagerV2`, `TimelineManagerV2`, etc.).
+- **Clear Separation of Concerns**: Each class has a well-defined role.
+- **Thorough Documentation**: JSDoc for all significant code elements.
+- **JavaScript Best Practices**: Strict mode, efficient DOM manipulation, robust error handling.
+- **Extensibility**: Designed for future enhancements (merging, complex branching).
+- **User Experience**: Focus on an intuitive and responsive UI.
+
+## Expected Code Quality (V2)
+
+- **Readability**: Clean, well-formatted, and understandable code.
+- **Maintainability**: Facilitated by modular design and comprehensive documentation.
+- **Robustness**: Includes error handling and validation.
+- **Efficiency**: Optimized for performance, especially in DOM and text processing.
+
+## Modules and Imports (V2)
+
+- [/v2/app-v2.js](mdc:v2/app-v2.js) is the main V2 application file, importing modules from [/v2/js/](mdc:v2/js).
+- `VersionContentStore` is imported directly by `VersionControlV2`.
+- Manage circular dependencies carefully, often by setting dependent properties post-instantiation.
+
+## Browser Compatibility
+
+- The application, especially V2, is intended for modern web browsers supporting ES6 Modules and standard DOM APIs.
