@@ -25,11 +25,12 @@ export class UIManager {
   /**
    * Creates a UIManager instance.
    * @param {import('./versionControl.js').VersionControlV2} versionControl - Main version control instance.
-   * @param {null} storageManager - Storage manager instance (currently null as it's removed).
+   * @param {import('./storageManager.js').StorageManager} storageManager - Storage manager instance.
    * @param {import('./timelineManager.js').TimelineManagerV2} timelineManager - Timeline manager instance.
    */
   constructor(versionControl, storageManager, timelineManager) {
     this.versionControl = versionControl;
+    this.storageManager = storageManager;
     this.timelineManager = timelineManager;
     this.controlsContainer = null;
     this.rawStorageDisplayElement = null; // For caching the DOM element
@@ -122,8 +123,14 @@ export class UIManager {
       return;
     }
 
+    const exportBtn = this._createButton('Export History', 'export-btn', this._handleExportClick.bind(this));
+    const importBtn = this._createButton('Import History', 'import-btn', this._handleImportClick.bind(this));
     const branchBtn = this._createButton('New Branch', UIManager.BRANCH_BTN_ID, this._handleBranchClick.bind(this));
 
+    this.controlsContainer.appendChild(exportBtn);
+    this.controlsContainer.appendChild(document.createTextNode(' ')); // Spacer
+    this.controlsContainer.appendChild(importBtn);
+    this.controlsContainer.appendChild(document.createTextNode(' ')); // Spacer
     this.controlsContainer.appendChild(branchBtn);
   }
 
@@ -166,6 +173,70 @@ export class UIManager {
         this.displayMessage(`Failed to create branch: ${error.message}`, UIManager.MESSAGE_TYPES.ERROR);
       }
     }
+  }
+
+  /**
+   * Handles the click event for the 'Export History' button.
+   * Exports all branches data to a downloadable JSON file.
+   * @private
+   */
+  _handleExportClick() {
+    if (!this.versionControl || !this.storageManager) {
+      this.displayMessage('Export functionality is not available.', UIManager.MESSAGE_TYPES.ERROR);
+      return;
+    }
+
+    try {
+      const branchesData = this.versionControl.getAllBranchesData();
+      this.storageManager.exportHistory(branchesData);
+      this.displayMessage('History exported successfully.', UIManager.MESSAGE_TYPES.SUCCESS);
+    } catch (error) {
+      console.error('Failed to export history:', error);
+      this.displayMessage(`Failed to export history: ${error.message}`, UIManager.MESSAGE_TYPES.ERROR);
+    }
+  }
+
+  /**
+   * Handles the click event for the 'Import History' button.
+   * Opens a file picker and imports version history from a JSON file.
+   * @private
+   */
+  _handleImportClick() {
+    if (!this.versionControl || !this.storageManager) {
+      this.displayMessage('Import functionality is not available.', UIManager.MESSAGE_TYPES.ERROR);
+      return;
+    }
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const importedData = this.storageManager.importHistory(event.target.result);
+            if (importedData) {
+              const success = this.versionControl.replaceAllBranches(importedData);
+              if (success) {
+                this.displayMessage('History imported successfully.', UIManager.MESSAGE_TYPES.SUCCESS);
+              } else {
+                this.displayMessage('Failed to import history.', UIManager.MESSAGE_TYPES.ERROR);
+              }
+            }
+          } catch (error) {
+            console.error('Failed to import history:', error);
+            this.displayMessage(`Failed to import history: ${error.message}`, UIManager.MESSAGE_TYPES.ERROR);
+          }
+        };
+        reader.onerror = () => {
+          this.displayMessage('Failed to read file.', UIManager.MESSAGE_TYPES.ERROR);
+        };
+        reader.readAsText(file);
+      }
+    });
+    input.click();
   }
 
   /**

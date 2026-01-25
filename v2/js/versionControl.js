@@ -26,7 +26,7 @@ export class VersionControl {
   constructor(editorManager, timelineManager, storageManager, uiManager) {
     this.editorManager = editorManager;
     this.timelineManager = timelineManager;
-    // this.storageManager = storageManager; // Removed
+    this.storageManager = storageManager;
     this.uiManager = uiManager;
 
     /**
@@ -50,18 +50,18 @@ export class VersionControl {
    * Initialize version control system
    */
   init() {
-    // const loadedHistory = this.storageManager.loadHistory(); // Removed
-    // const loadedPrefs = this.storageManager.loadUserPreferences(); // Removed
+    const loadedBranches = this.storageManager.loadBranches();
+    const loadedPrefs = this.storageManager.loadUserPreferences();
 
-    // if (loadedHistory) { // Removed block
-    //   this._loadHistoryAndPreferences(loadedHistory, loadedPrefs);
-    // } else {
-    this._initializeNewRepository(); // Always initialize new as no persistence
-    // }
+    if (loadedBranches) {
+      this._loadSavedData(loadedBranches, loadedPrefs);
+    } else {
+      this._initializeNewRepository();
+    }
 
     this._updateEditorContent();
     this._updateUI();
-    // this._saveAllData(); // Removed call
+    this._saveAllData();
   }
   
   /**
@@ -98,11 +98,65 @@ export class VersionControl {
       id: DEFAULT_BRANCH_ID,
       parentBranchId: null,
       parentTransactionIndex: INITIAL_TRANSACTION_INDEX, // Main has no parent transaction it forked from
-      initialContent: "", 
+      initialContent: "",
       transactions: [] // Log of pure opArrays for this branch
     };
     this._currentBranchId = DEFAULT_BRANCH_ID;
     this._currentTransactionIndex = INITIAL_TRANSACTION_INDEX; // Start at initialContent
+  }
+
+  /**
+   * Loads saved branches and preferences data
+   * @private
+   * @param {Object} branchesData - Saved branches data
+   * @param {Object} prefsData - Saved preferences (branch ID and transaction index)
+   */
+  _loadSavedData(branchesData, prefsData) {
+    this._branches = branchesData;
+
+    // Restore user's last position if valid
+    if (prefsData &&
+        this._branches[prefsData.currentBranchId] &&
+        typeof prefsData.currentTransactionIndex === 'number') {
+      const branch = this._branches[prefsData.currentBranchId];
+      const indexIsValid = prefsData.currentTransactionIndex >= INITIAL_TRANSACTION_INDEX &&
+                          prefsData.currentTransactionIndex < branch.transactions.length;
+
+      if (indexIsValid || prefsData.currentTransactionIndex === INITIAL_TRANSACTION_INDEX) {
+        this._currentBranchId = prefsData.currentBranchId;
+        this._currentTransactionIndex = prefsData.currentTransactionIndex;
+      } else {
+        // Invalid index, go to tip of branch
+        this._currentBranchId = prefsData.currentBranchId;
+        this._currentTransactionIndex = branch.transactions.length - 1;
+      }
+    } else {
+      // No valid prefs, go to tip of main
+      if (this._branches[DEFAULT_BRANCH_ID]) {
+        this._currentBranchId = DEFAULT_BRANCH_ID;
+        const mainBranch = this._branches[DEFAULT_BRANCH_ID];
+        this._currentTransactionIndex = mainBranch.transactions.length > 0
+          ? mainBranch.transactions.length - 1
+          : INITIAL_TRANSACTION_INDEX;
+      }
+    }
+  }
+
+  /**
+   * Saves all data (branches and preferences) to storage
+   * @private
+   */
+  _saveAllData() {
+    this.storageManager.saveBranches(this._branches);
+    this._saveUserPreferences();
+  }
+
+  /**
+   * Saves user preferences (current position) to storage
+   * @private
+   */
+  _saveUserPreferences() {
+    this.storageManager.saveUserPreferences(this._currentBranchId, this._currentTransactionIndex);
   }
 
   /**
@@ -301,7 +355,7 @@ export class VersionControl {
 
     this._updateEditorContent(); // Ensure editor is synced after commit.
     this._updateUI();
-    // this._saveAllData(); // Removed call
+    this._saveAllData();
   }
   
   /**
@@ -337,10 +391,10 @@ export class VersionControl {
     
     this._currentBranchId = branchName;
     this._currentTransactionIndex = INITIAL_TRANSACTION_INDEX; // New branch starts at its initialContent state
-    
-    this._updateEditorContent(); 
+
+    this._updateEditorContent();
     this._updateUI();
-    // this._saveAllData(); // Removed call
+    this._saveAllData();
     this.uiManager.displayMessage(`Branch "${branchName}" created and switched to.`, 'success');
     return true;
   }
@@ -379,12 +433,12 @@ export class VersionControl {
     }
     
     this._currentBranchId = branchId;
-    this._currentTransactionIndex = transactionIndex; 
-    
+    this._currentTransactionIndex = transactionIndex;
+
     this._updateEditorContent();
     this._updateUI();
-    // this._saveUserPreferences(); // Removed call
-    
+    this._saveUserPreferences();
+
     return true;
   }
   
@@ -401,12 +455,12 @@ export class VersionControl {
     }
 
     // Current index is N, so we go to N-1. If N is 0, we go to -1 (initialContent).
-    this._currentTransactionIndex--; 
-    
+    this._currentTransactionIndex--;
+
     this._updateEditorContent();
     this._updateUI();
-    // this._saveUserPreferences(); // Removed call
-    
+    this._saveUserPreferences();
+
     return true;
   }
   
@@ -425,11 +479,11 @@ export class VersionControl {
     } else {
         return false; // Already at the last transaction or no transactions to redo to from initial
     }
-    
+
     this._updateEditorContent();
     this._updateUI();
-    // this._saveUserPreferences(); // Removed call
-    
+    this._saveUserPreferences();
+
     return true;
   }
 
@@ -448,6 +502,48 @@ export class VersionControl {
    */
   getAllBranchesData() {
     return this._branches;
+  }
+
+  /**
+   * Replace all branches with imported data
+   * @param {object} newBranchesData - New branches data from import
+   * @returns {boolean} Success status
+   */
+  replaceAllBranches(newBranchesData) {
+    if (!newBranchesData || typeof newBranchesData !== 'object') {
+      console.error('Invalid branches data for import');
+      return false;
+    }
+
+    this._branches = newBranchesData;
+
+    // Reset to a sensible default position (tip of main)
+    if (this._branches[DEFAULT_BRANCH_ID]) {
+      this._currentBranchId = DEFAULT_BRANCH_ID;
+      const mainBranch = this._branches[DEFAULT_BRANCH_ID];
+      this._currentTransactionIndex = mainBranch.transactions.length > 0
+        ? mainBranch.transactions.length - 1
+        : INITIAL_TRANSACTION_INDEX;
+    } else {
+      // If no main branch, use the first available branch
+      const firstBranchId = Object.keys(this._branches)[0];
+      if (firstBranchId) {
+        this._currentBranchId = firstBranchId;
+        const branch = this._branches[firstBranchId];
+        this._currentTransactionIndex = branch.transactions.length > 0
+          ? branch.transactions.length - 1
+          : INITIAL_TRANSACTION_INDEX;
+      } else {
+        // No branches at all, initialize fresh
+        this._initializeNewRepository();
+      }
+    }
+
+    this._updateEditorContent();
+    this._updateUI();
+    this._saveAllData();
+
+    return true;
   }
 
   /**
