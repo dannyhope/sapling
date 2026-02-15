@@ -59,11 +59,16 @@ export class VersionControl {
   init() {
     const loadedBranches = this.storageManager.loadBranches();
     const loadedPrefs = this.storageManager.loadUserPreferences();
+    const loadedLabels = this.storageManager.loadVersionLabels();
 
     if (loadedBranches) {
       this._loadSavedData(loadedBranches, loadedPrefs);
     } else {
       this._initializeNewRepository();
+    }
+
+    if (loadedLabels) {
+      this._versionLabels = loadedLabels;
     }
 
     this._updateEditorContent();
@@ -150,12 +155,13 @@ export class VersionControl {
   }
 
   /**
-   * Saves all data (branches and preferences) to storage
+   * Saves all data (branches, preferences, and version labels) to storage
    * @private
    */
   _saveAllData() {
     this.storageManager.saveBranches(this._branches);
     this._saveUserPreferences();
+    this.storageManager.saveVersionLabels(this._versionLabels);
   }
 
   /**

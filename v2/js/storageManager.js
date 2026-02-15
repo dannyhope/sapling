@@ -16,6 +16,12 @@ export class StorageManager {
    */
   static STORAGE_KEY_PREFS = 'sapling_v2_preferences';
 
+  /**
+   * @private
+   * @type {string} Key for storing version labels in localStorage
+   */
+  static STORAGE_KEY_VERSION_LABELS = 'sapling_v2_version_labels';
+
   constructor() {}
 
   /**
@@ -150,12 +156,45 @@ export class StorageManager {
   }
 
   /**
+   * Saves version labels to localStorage
+   * @param {Object} versionLabels - Version labels map from VersionControl
+   * @returns {boolean} Success status
+   */
+  saveVersionLabels(versionLabels) {
+    try {
+      const jsonData = JSON.stringify(versionLabels);
+      localStorage.setItem(StorageManager.STORAGE_KEY_VERSION_LABELS, jsonData);
+      return true;
+    } catch (e) {
+      console.error('Failed to save version labels to localStorage:', e);
+      return false;
+    }
+  }
+
+  /**
+   * Loads version labels from localStorage
+   * @returns {Object|null} Version labels or null if not found/invalid
+   */
+  loadVersionLabels() {
+    try {
+      const jsonData = localStorage.getItem(StorageManager.STORAGE_KEY_VERSION_LABELS);
+      if (jsonData) {
+        return JSON.parse(jsonData);
+      }
+    } catch (e) {
+      console.error('Failed to load version labels from localStorage:', e);
+    }
+    return null;
+  }
+
+  /**
    * Clears all stored data (for testing/reset purposes)
    */
   clearAllData() {
     try {
       localStorage.removeItem(StorageManager.STORAGE_KEY_BRANCHES);
       localStorage.removeItem(StorageManager.STORAGE_KEY_PREFS);
+      localStorage.removeItem(StorageManager.STORAGE_KEY_VERSION_LABELS);
       console.log('All stored data cleared');
     } catch (e) {
       console.error('Failed to clear stored data:', e);
