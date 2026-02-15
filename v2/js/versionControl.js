@@ -34,16 +34,23 @@ export class VersionControl {
      * @type {object} Stores all branches with their versions
      */
     this._branches = {};
-    
+
     /** @private @type {string} Currently active branch ID */
     this._currentBranchId = '';
-    
+
     /**
      * @private @type {number}
      * Index in the current branch's transactions array.
      * `INITIAL_TRANSACTION_INDEX` (-1) represents the initialContent state of the branch.
      */
     this._currentTransactionIndex = -1;
+
+    /**
+     * @private
+     * @type {object} Maps version identifiers to custom labels
+     * Format: { 'branchId_index': 'label text' }
+     */
+    this._versionLabels = {};
   }
 
   /**
@@ -708,8 +715,56 @@ export class VersionControl {
       // This implies deletion of 1 character at 'index'
       return { type: OP_TYPE_DELETE, description: `Deleted character at index ${index}` };
     }
-    
+
     console.warn("Unknown operation type or malformed opDetails in transaction:", opArray);
     return { type: OP_TYPE_UNKNOWN, description: 'Unknown or malformed operation' };
   }
-} 
+
+  /**
+   * Sets a label for a specific version on a specific branch
+   * @param {string} branchId - The branch ID
+   * @param {number} transactionIndex - The transaction index (or -1 for initialContent)
+   * @param {string} label - The label text to set (empty string to remove)
+   */
+  setVersionLabel(branchId, transactionIndex, label) {
+    const compositeKey = `${branchId}_${transactionIndex}`;
+    if (label && label.trim()) {
+      this._versionLabels[compositeKey] = label.trim();
+    } else {
+      delete this._versionLabels[compositeKey];
+    }
+    this._saveAllData();
+    this._updateUI();
+  }
+
+  /**
+   * Gets the label for a specific version
+   * @param {string} branchId - The branch ID
+   * @param {number} transactionIndex - The transaction index (or -1 for initialContent)
+   * @returns {string|null} The label text or null if not set
+   */
+  getVersionLabel(branchId, transactionIndex) {
+    const compositeKey = `${branchId}_${transactionIndex}`;
+    return this._versionLabels[compositeKey] || null;
+  }
+
+  /**
+   * Gets all version labels
+   * @returns {object} The version labels map
+   */
+  getAllVersionLabels() {
+    return this._versionLabels;
+  }
+
+  /**
+   * Replaces all version labels with imported data
+   * @param {object} newLabels - New labels data from import
+   */
+  replaceAllVersionLabels(newLabels) {
+    if (!newLabels || typeof newLabels !== 'object') {
+      console.error('Invalid version labels data for import');
+      return;
+    }
+    this._versionLabels = newLabels;
+  }
+}

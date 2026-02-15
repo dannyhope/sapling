@@ -21,6 +21,7 @@ export class UIManager {
   static KEY_Z = 'z';
   static KEY_Y = 'y';
   static KEY_B = 'b';
+  static KEY_L = 'l';
 
   /**
    * Creates a UIManager instance.
@@ -52,6 +53,7 @@ export class UIManager {
    * - Ctrl/Cmd + Z: Undo
    * - Ctrl/Cmd + Shift + Z or Ctrl/Cmd + Y: Redo
    * - Ctrl/Cmd + B: Create a new branch
+   * - Ctrl/Cmd + L: Label the current version
    * @private
    * @param {KeyboardEvent} event - The keyboard event.
    */
@@ -83,6 +85,9 @@ export class UIManager {
         // or return a status that UIManager can use.
         // this.displayMessage(`Branch "${branchName}" created`, UIManager.MESSAGE_TYPES.SUCCESS);
       }
+    } else if (ctrlKey && !event.shiftKey && event.key.toLowerCase() === UIManager.KEY_L) {
+      event.preventDefault();
+      this._handleLabelVersionClick();
     }
   }
 
@@ -177,7 +182,7 @@ export class UIManager {
 
   /**
    * Handles the click event for the 'Export History' button.
-   * Exports all branches data to a downloadable JSON file.
+   * Exports all branches data and version labels to a downloadable JSON file.
    * @private
    */
   _handleExportClick() {
@@ -188,7 +193,12 @@ export class UIManager {
 
     try {
       const branchesData = this.versionControl.getAllBranchesData();
-      this.storageManager.exportHistory(branchesData);
+      const versionLabels = this.versionControl.getAllVersionLabels();
+      const exportData = {
+        branches: branchesData,
+        versionLabels: versionLabels
+      };
+      this.storageManager.exportHistory(exportData);
       this.displayMessage('History exported successfully.', UIManager.MESSAGE_TYPES.SUCCESS);
     } catch (error) {
       console.error('Failed to export history:', error);
@@ -198,7 +208,7 @@ export class UIManager {
 
   /**
    * Handles the click event for the 'Import History' button.
-   * Opens a file picker and imports version history from a JSON file.
+   * Opens a file picker and imports version history and labels from a JSON file.
    * @private
    */
   _handleImportClick() {
@@ -218,8 +228,13 @@ export class UIManager {
           try {
             const importedData = this.storageManager.importHistory(event.target.result);
             if (importedData) {
-              const success = this.versionControl.replaceAllBranches(importedData);
+              // Handle both old format (direct branches) and new format (with versionLabels)
+              const branchesData = importedData.branches || importedData;
+              const versionLabels = importedData.versionLabels || {};
+
+              const success = this.versionControl.replaceAllBranches(branchesData);
               if (success) {
+                this.versionControl.replaceAllVersionLabels(versionLabels);
                 this.displayMessage('History imported successfully.', UIManager.MESSAGE_TYPES.SUCCESS);
               } else {
                 this.displayMessage('Failed to import history.', UIManager.MESSAGE_TYPES.ERROR);
@@ -245,6 +260,35 @@ export class UIManager {
    */
   promptForBranchName() {
     return prompt('Enter a name for the new branch:');
+  }
+
+  /**
+   * Handles labeling the current version
+   * @private
+   */
+  _handleLabelVersionClick() {
+    if (!this.versionControl) return;
+
+    const currentState = this.versionControl.getCurrentStateInfo();
+    if (!currentState) {
+      this.displayMessage('Cannot label version: No current state available.', UIManager.MESSAGE_TYPES.ERROR);
+      return;
+    }
+
+    const currentLabel = this.versionControl.getVersionLabel(currentState.branchId, currentState.transactionIndex);
+    const prompt_text = currentLabel
+      ? `Enter label for this version (current: "${currentLabel}"):\n\n(Leave empty to remove label)`
+      : 'Enter label for this version:';
+    const label = prompt(prompt_text);
+
+    if (label !== null) { // null means user clicked Cancel
+      this.versionControl.setVersionLabel(currentState.branchId, currentState.transactionIndex, label);
+      if (label.trim()) {
+        this.displayMessage(`Version labeled: "${label}"`, UIManager.MESSAGE_TYPES.SUCCESS);
+      } else {
+        this.displayMessage('Label removed.', UIManager.MESSAGE_TYPES.INFO);
+      }
+    }
   }
 
   /**

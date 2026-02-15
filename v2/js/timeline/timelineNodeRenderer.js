@@ -44,12 +44,14 @@ export class TimelineNodeRenderer {
     if (initialStateInfo) {
       const isCurrentInitial = branchId === currentGlobalBranchId && currentGlobalTransactionIndex === -1;
       const initialNodeCompositeKey = `${branchId}_-1`;
+      const initialLabel = this.versionControl.getVersionLabel(branchId, -1);
       const initialVisualNode = this._createVisualNode(
         xOffset,
         0, // Y is relative to branchStateGroup, which is already at yPos
         isCurrentInitial ? TIMELINE_CONSTANTS.ACTIVE_NODE_RADIUS : TIMELINE_CONSTANTS.NODE_RADIUS,
         initialStateInfo,
-        isCurrentInitial
+        isCurrentInitial,
+        initialLabel
       );
       initialVisualNode.dataset.compositeKey = initialNodeCompositeKey;
 
@@ -82,12 +84,14 @@ export class TimelineNodeRenderer {
       const isCurrentTransaction = branchId === currentGlobalBranchId && txIndex === currentGlobalTransactionIndex;
       const nodeCompositeKey = `${branchId}_${txIndex}`;
 
+      const label = this.versionControl.getVersionLabel(branchId, txIndex);
       const visualNode = this._createVisualNode(
         xOffset,
         0, // Y is relative to branchStateGroup
         isCurrentTransaction ? TIMELINE_CONSTANTS.ACTIVE_NODE_RADIUS : TIMELINE_CONSTANTS.NODE_RADIUS,
         stateInfo,
-        isCurrentTransaction
+        isCurrentTransaction,
+        label
       );
       visualNode.dataset.compositeKey = nodeCompositeKey;
 
@@ -115,16 +119,18 @@ export class TimelineNodeRenderer {
    * Creates a visual SVG circle element representing a single version state on the timeline.
    * @private
    */
-  _createVisualNode(x, y, radius, stateInfo, isCurrent) {
+  _createVisualNode(x, y, radius, stateInfo, isCurrent, label) {
+    const group = document.createElementNS(TIMELINE_CONSTANTS.SVG_NS, "g");
+
     const circle = document.createElementNS(TIMELINE_CONSTANTS.SVG_NS, "circle");
     circle.setAttribute("cx", x.toString());
     circle.setAttribute("cy", y.toString());
     circle.setAttribute("r", radius.toString());
-    
+
     let fillColor = TIMELINE_CONSTANTS.COLOR_LIGHT_GRAY;
     let strokeColor = TIMELINE_CONSTANTS.COLOR_DARK_GRAY;
     let strokeWidth = TIMELINE_CONSTANTS.NODE_STROKE_WIDTH;
-    
+
     if (isCurrent) {
       fillColor = TIMELINE_CONSTANTS.COLOR_YELLOW;
       strokeWidth = TIMELINE_CONSTANTS.ACTIVE_NODE_STROKE_WIDTH;
@@ -141,19 +147,45 @@ export class TimelineNodeRenderer {
         case 'branch_created': fillColor = TIMELINE_CONSTANTS.COLOR_PURPLE; break;
       }
     }
-    
+
     circle.setAttribute("fill", fillColor);
     circle.setAttribute("stroke", strokeColor);
     circle.setAttribute("stroke-width", strokeWidth);
     circle.style.pointerEvents = TIMELINE_CONSTANTS.POINTER_EVENTS_NONE;
     circle.classList.add('timeline-node');
-    
+
     const title = document.createElementNS(TIMELINE_CONSTANTS.SVG_NS, "title");
     const opDisplay = stateInfo.op ? `Op: [${stateInfo.op.join(',')}]` : "Initial State";
-    title.textContent = `State: ${stateInfo.id.branchId} @ index ${stateInfo.id.index}\n${stateInfo.message || ''}\n${opDisplay}`;
+    let tooltipText = `State: ${stateInfo.id.branchId} @ index ${stateInfo.id.index}\n${stateInfo.message || ''}\n${opDisplay}`;
+    if (label) {
+      tooltipText += `\nLabel: ${label}`;
+    }
+    title.textContent = tooltipText;
     circle.appendChild(title);
-    
-    return circle;
+
+    group.appendChild(circle);
+
+    // Add label text if it exists
+    if (label) {
+      const labelText = document.createElementNS(TIMELINE_CONSTANTS.SVG_NS, "text");
+      labelText.setAttribute("x", x.toString());
+      labelText.setAttribute("y", (y + radius + 18).toString()); // Below the circle
+      labelText.setAttribute("text-anchor", "middle");
+      labelText.setAttribute("font-size", "11");
+      labelText.setAttribute("fill", "#333");
+      labelText.setAttribute("font-weight", "600");
+      labelText.style.pointerEvents = TIMELINE_CONSTANTS.POINTER_EVENTS_NONE;
+      labelText.classList.add('timeline-node-label');
+      labelText.textContent = label;
+
+      const labelTitle = document.createElementNS(TIMELINE_CONSTANTS.SVG_NS, "title");
+      labelTitle.textContent = `Label: ${label}`;
+      labelText.appendChild(labelTitle);
+
+      group.appendChild(labelText);
+    }
+
+    return group;
   }
 
   /**
