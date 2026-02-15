@@ -122,6 +122,12 @@ import { StorageManager } from './js/storageManager.js';
       // Initialize version control system
       versionControl.init();
 
+      // Expose for testing and debugging
+      window.versionControl = versionControl;
+      window.editorManager = editorManager;
+      window.timelineManager = timelineManager;
+      window.uiManager = uiManager;
+
     } catch (error) {
       console.error('Failed to initialize Text Version Control:', error);
       // Display user-friendly error message
