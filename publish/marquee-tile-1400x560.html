@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1400, initial-scale=1" />
+    <title>Sapling — marquee tile (1400×560)</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 1400px;
+        height: 560px;
+        overflow: hidden;
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      body {
+        background: #f8f9fa;
+        color: #1a272c;
+      }
+      .frame {
+        width: 1400px;
+        height: 560px;
+        padding: 70px 84px;
+        display: grid;
+        align-content: start;
+        gap: 22px;
+        box-sizing: border-box;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+      }
+      .mark {
+        width: 84px;
+        height: 84px;
+      }
+      .title {
+        font-weight: 760;
+        font-size: 70px;
+        letter-spacing: -0.03em;
+        line-height: 1.0;
+        margin: 0;
+      }
+      .subtitle {
+        margin: 0;
+        font-size: 24px;
+        line-height: 1.35;
+        color: #4b565a;
+        max-width: 860px;
+      }
+      .pill {
+        justify-self: start;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        border-radius: 999px;
+        background: #ffffff;
+        border: 1px solid #e6e7e8;
+        color: #4b565a;
+        font-size: 14px;
+      }
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        background: #108bc1;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="frame">
+      <div class="row">
+        <img class="mark" src="icon-128.svg" alt="" />
+        <h1 class="title">Sapling</h1>
+      </div>
+      <p class="subtitle">
+        Text version control with a timeline and branching for your writing.
+      </p>
+      <div class="pill"><span class="dot"></span> Chrome extension</div>
+    </div>
+  </body>
+</html>
+

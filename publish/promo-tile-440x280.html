@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=440, initial-scale=1" />
+    <title>Sapling — promo tile (440×280)</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 440px;
+        height: 280px;
+        overflow: hidden;
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      body {
+        background: #f8f9fa;
+        color: #1a272c;
+      }
+      .frame {
+        width: 440px;
+        height: 280px;
+        padding: 26px 28px;
+        display: grid;
+        align-content: start;
+        gap: 18px;
+        box-sizing: border-box;
+      }
+      .mark {
+        width: 56px;
+        height: 56px;
+      }
+      .title {
+        font-weight: 700;
+        font-size: 34px;
+        letter-spacing: -0.02em;
+        line-height: 1.05;
+        margin: 0;
+      }
+      .subtitle {
+        margin: 0;
+        font-size: 15px;
+        line-height: 1.35;
+        color: #4b565a;
+        max-width: 340px;
+      }
+      .pill {
+        justify-self: start;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 999px;
+        background: #ffffff;
+        border: 1px solid #e6e7e8;
+        color: #4b565a;
+        font-size: 12px;
+      }
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #108bc1;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="frame">
+      <img class="mark" src="icon-128.svg" alt="" />
+      <h1 class="title">Sapling</h1>
+      <p class="subtitle">Text version control with a timeline and branching for your writing.</p>
+      <div class="pill"><span class="dot"></span> Chrome extension</div>
+    </div>
+  </body>
+</html>
+
