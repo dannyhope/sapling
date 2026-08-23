@@ -1,0 +1,23 @@
+{
+	"version": 1,
+	"tasks": [
+		{
+			"id": "task-1",
+			"title": "Make and review a change",
+			"description": "Type something in the editor, then navigate back in time to review a previous version.",
+			"successCriteria": "Participant can navigate the timeline and understand version history"
+		},
+		{
+			"id": "task-2",
+			"title": "Create a branch",
+			"description": "Go back to an earlier version and start editing from that point.",
+			"successCriteria": "Participant understands branching creates an alternative history"
+		},
+		{
+			"id": "task-3",
+			"title": "Find your way back",
+			"description": "After exploring the timeline, return to the most recent version of your text.",
+			"successCriteria": "Participant can orient themselves and navigate to tip of any branch"
+		}
+	]
+}
