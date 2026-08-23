@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Sapling",
+  "version": "0.1.0",
+  "description": "Text version control with a timeline and branching for your writing.",
+  "action": {
+    "default_title": "Sapling",
+    "default_popup": "popup.html"
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  }
+}
+

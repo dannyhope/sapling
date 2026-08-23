@@ -4,6 +4,17 @@ Quick branches
 
 A browser-based version control interface for text editing with an interactive timeline and branching support.
 
+## Browser extension (Chrome/Chromium, Manifest V3)
+
+Sapling can be loaded as a local browser extension. The toolbar popup includes an **Open Sapling** button that opens the full app (`v2/`) in a new tab.
+
+### Load unpacked (local development)
+
+1. Open `chrome://extensions`
+2. Enable **Developer mode**
+3. Click **Load unpacked**
+4. Select this repo folder (the one containing `manifest.json`)
+
 ## Features
 
 - Real-time recording of text edits in a textarea
@@ -15,7 +26,7 @@ A browser-based version control interface for text editing with an interactive t
 
 ## How to Use
 
-1. Open `index.html` in your browser
+1. Open `v2/index.html` in your browser (standalone), or use the extension’s **Open Sapling** button
 2. Start typing in the editor - changes are automatically recorded
 3. Use the timeline below to navigate between versions
 4. When you navigate to a previous version and make edits, a new branch is created
