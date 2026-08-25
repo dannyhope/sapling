@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dannify status — Sapling</title>
+  <link rel="stylesheet" href="operator.css">
+  <style>
+    .panel { margin: 0 0 1rem; }
+    .panel h2 { margin-top: 0; }
+    .panel ul { margin: 0 0 0.85rem; padding-left: 1.2rem; }
+    .panel li { margin: 0 0 0.35rem; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>Dannify status — Sapling</h1>
+    <p class="meta">Living audit. Regenerated whenever <code>/dannify</code> runs. Last updated: 2026-08-25.</p>
+    <p class="hint">What still needs doing, then what’s already up to spec. Product truth is <code>_docs/spec.md</code> and <code>_docs/design.md</code>. Current KPI is <code>_docs/now.md</code>.</p>
+
+    <section class="panel">
+      <h2>Improvements</h2>
+      <h3>Must</h3>
+      <ul>
+        <li>Add living-doc headers to <code>_docs/spec.md</code> and <code>_docs/design.md</code> (date + source-of-truth line)</li>
+      </ul>
+      <h3>Should</h3>
+      <ul>
+        <li>Add <code>_docs/now.md</code> with a current KPI (<code>/goal</code> — do not invent one)</li>
+        <li>State accessibility level in <code>_docs/spec.md</code> (honest “none” is fine)</li>
+        <li>Add feedback link to <a href="https://dannyhope.co.uk/feedback">https://dannyhope.co.uk/feedback</a> in product chrome and/or README</li>
+        <li>Add Sapling to Bombay <code>projects.json</code></li>
+        <li>Tighten README purpose into one clear section before install/usage (drop triple H1 / “Quick branches”)</li>
+        <li>Product UI isn’t on shadcn (<code>v2/</code> is plain HTML/CSS/JS)</li>
+        <li>Replace non-brand colours in <code>v2/style.css</code> (<code>#673AB7</code>, <code>#FFD700</code>, <code>#607D8B</code>) with brand.md tokens</li>
+        <li>Fix <code>v2/</code> footer credit colour from <code>#999</code> to Cool Grey 60 (<code>#616E73</code>)</li>
+      </ul>
+      <h3>Nice</h3>
+      <ul>
+        <li>Offer Prototype Panels (Flags + site modes + docks) for the <code>v2/</code> web app</li>
+      </ul>
+    </section>
+
+    <section class="panel">
+      <h2>Already right</h2>
+      <ul>
+        <li>Manifest V3 extension; load-unpacked steps in README</li>
+        <li><code>publish/index.html</code> pack present (with <code>operator.css</code>)</li>
+        <li>Attribution “A Danny Hope product” → <code>https://dannyhope.co.uk</code> in popup, v2, and usability-test</li>
+        <li><code>_docs/spec.md</code> covers purpose, popup + full-app surfaces, non-goals</li>
+        <li><code>_docs/design.md</code> covers tone, popup, icon</li>
+        <li><code>.in/</code> inbox exists</li>
+        <li><code>.gitignore</code> includes <code>_vibing/</code> and <code>.DS_Store</code>; <code>_vibing/</code> directory present</li>
+        <li><code>Sapling.code-workspace</code> and <code>CLAUDE.md</code> present</li>
+        <li>Usability-test scaffold (<code>usability-test.html</code> + <code>_docs/usability-tasks.json</code>)</li>
+        <li>No appearance / theme picker (popup follows OS via <code>color-scheme</code>)</li>
+        <li>Product chrome has no public third-party hrefs (GitHub only in operator public helper)</li>
+      </ul>
+    </section>
+  </div>
+</body>
+</html>
