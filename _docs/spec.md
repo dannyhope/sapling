@@ -1,4 +1,8 @@
-# Sapling — spec
+# Sapling — Product Spec
+
+> Living document. Update whenever behaviour changes. Last updated: 2026-08-28.
+>
+> **This file is the source of truth for how Sapling should work.**
 
 Sapling is a **text version control** tool: it records edits to a document, lets you move through history, and creates **branches** when you edit from an earlier point.
 
@@ -30,4 +34,10 @@ This repo contains the core Sapling app (currently `v2/`) and a Chrome/Chromium 
 
 - No page injection / overlays on third-party sites (content scripts) yet.
 - No collaboration / sync between devices.
+
+## Accessibility
+
+Sapling is an unpublished personal project; no formal accessibility level has
+yet been selected. Keep native controls, keyboard shortcuts, focus states, and
+colour-independent status cues usable as the interface evolves.
 

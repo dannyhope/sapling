@@ -1,4 +1,8 @@
-# Sapling — design
+# Sapling — Design
+
+> Living document. Update whenever visual design changes. Last updated: 2026-08-28.
+>
+> **This file is the source of truth for how Sapling should look.**
 
 Sapling is quiet utility chrome: the interface should stay out of the way of the writing.
 

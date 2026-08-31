@@ -15,23 +15,23 @@
 <body>
   <div class="page">
     <h1>Dannify status — Sapling</h1>
-    <p class="meta">Living audit. Regenerated whenever <code>/dannify</code> runs. Last updated: 2026-08-25.</p>
+    <p class="meta">Living audit. Regenerated whenever <code>/dannify</code> runs. Last updated: 2026-08-28.</p>
     <p class="hint">What still needs doing, then what’s already up to spec. Product truth is <code>_docs/spec.md</code> and <code>_docs/design.md</code>. Current KPI is <code>_docs/now.md</code>.</p>
 
     <section class="panel">
       <h2>Improvements</h2>
       <h3>Must</h3>
       <ul>
-        <li>Add living-doc headers to <code>_docs/spec.md</code> and <code>_docs/design.md</code> (date + source-of-truth line)</li>
       </ul>
       <h3>Should</h3>
       <ul>
         <li>Add <code>_docs/now.md</code> with a current KPI (<code>/goal</code> — do not invent one)</li>
-        <li>State accessibility level in <code>_docs/spec.md</code> (honest “none” is fine)</li>
+        <li>Add <code>_docs/now.md</code> with a current KPI (<code>/goal</code> — do not invent one)</li>
         <li>Add feedback link to <a href="https://dannyhope.co.uk/feedback">https://dannyhope.co.uk/feedback</a> in product chrome and/or README</li>
         <li>Add Sapling to Bombay <code>projects.json</code></li>
+        <li>Add <code>scripts/ensure-local-domain.sh</code> and map <code>sapling.test</code> to loopback in <code>/etc/hosts</code></li>
         <li>Tighten README purpose into one clear section before install/usage (drop triple H1 / “Quick branches”)</li>
-        <li>Product UI isn’t on shadcn (<code>v2/</code> is plain HTML/CSS/JS)</li>
+        <li>Product UI isn’t on shadcn (<code>v2/</code> is plain HTML/CSS/JS) — retain the existing vanilla extension stack unless a deliberate migration is chosen</li>
         <li>Replace non-brand colours in <code>v2/style.css</code> (<code>#673AB7</code>, <code>#FFD700</code>, <code>#607D8B</code>) with brand.md tokens</li>
         <li>Fix <code>v2/</code> footer credit colour from <code>#999</code> to Cool Grey 60 (<code>#616E73</code>)</li>
       </ul>
@@ -49,12 +49,14 @@
         <li>Attribution “A Danny Hope product” → <code>https://dannyhope.co.uk</code> in popup, v2, and usability-test</li>
         <li><code>_docs/spec.md</code> covers purpose, popup + full-app surfaces, non-goals</li>
         <li><code>_docs/design.md</code> covers tone, popup, icon</li>
+        <li>Living-doc headers and accessibility note are present in product docs</li>
         <li><code>.in/</code> inbox exists</li>
         <li><code>.gitignore</code> includes <code>_vibing/</code> and <code>.DS_Store</code>; <code>_vibing/</code> directory present</li>
         <li><code>Sapling.code-workspace</code> and <code>CLAUDE.md</code> present</li>
         <li>Usability-test scaffold (<code>usability-test.html</code> + <code>_docs/usability-tasks.json</code>)</li>
         <li>No appearance / theme picker (popup follows OS via <code>color-scheme</code>)</li>
         <li>Product chrome has no public third-party hrefs (GitHub only in operator public helper)</li>
+        <li>Extension package is Manifest V3 and publish pack is present; existing vanilla stack retained</li>
       </ul>
     </section>
   </div>
