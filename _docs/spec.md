@@ -30,6 +30,16 @@ This repo contains the core Sapling app (currently `v2/`) and a Chrome/Chromium 
 - Sapling stores data **locally in the browser** (no server).
 - No analytics, tracking, or network requests are required for core function.
 
+## Local development
+
+The app can be served locally for browser development at
+`http://sapling.local/v2/`. `scripts/start-dev.sh` ensures the committed
+hostname resolves to `127.0.0.1`, selects the preferred port in `.dev-port`
+(falling back if busy), and starts the HTTP server on loopback. The shared
+Bombay port-80 proxy owns the portless URL and must route
+`sapling.local` to the actual selected development port; it is not configured
+or replaced by this repository.
+
 ## Non-goals (current shipping scope)
 
 - No page injection / overlays on third-party sites (content scripts) yet.

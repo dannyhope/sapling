@@ -35,6 +35,17 @@ Sapling can be loaded as a local browser extension. The toolbar popup includes a
    - `Ctrl/⌘+Shift+Z`: Navigate to next version
    - `Ctrl/⌘+B`: Create a named branch
 
+### Local development
+
+Run `./scripts/start-dev.sh` to serve the app at `http://sapling.local/v2/`.
+The server binds only to `127.0.0.1` and uses the project’s preferred port
+from `.dev-port` (falling back to the next free port). The shared Bombay
+port-80 proxy must route `sapling.local` to that actual development port:
+`sapling.local → 127.0.0.1:5617` normally.
+
+The Python server serves source files directly; refresh the browser after
+changes. The extension’s standalone workflow remains available.
+
 ## Implementation Details
 
 - Pure JavaScript with no external dependencies

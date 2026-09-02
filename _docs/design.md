@@ -23,6 +23,12 @@ Sapling is quiet utility chrome: the interface should stay out of the way of the
 
 - The app UI lives in `v2/` and should remain focused on editing + history.
 
+### Local development
+
+- The portless development URL is `http://sapling.local/v2/`.
+- Development controls stay outside the product UI; local serving is a
+  command-line workflow.
+
 ## Icon
 
 - Toolbar icon is a **neutral glyph** on a **transparent** background.
