@@ -439,7 +439,31 @@ Critical path: Core services → Textarea monitoring → Timeline components →
 - **Estimated complexity:** Unknown pending investigation
 
 ### Questions for refinement
-- Will be identified during interactive `/refine` session
+
+1. **What should we build first?**  
+   Should Sapling stay as a standalone app for now, or should we start the
+   browser-extension migration?
+2. **Where should Sapling appear on websites?**  
+   Should it add a small Sapling panel next to every text box, or only when
+   someone turns it on for a particular website?
+3. **Which websites must work in the first release?**  
+   Please name the websites that are essential for launch (for example Gmail,
+   GitHub, or Notion).
+4. **What should happen when there are several text boxes on one page?**  
+   Should each text box have its own history, or should all text boxes share
+   one history?
+5. **What should happen after a page is refreshed or reopened?**  
+   Should Sapling restore the history automatically, and for how long should it
+   keep that history?
+6. **What should users be able to turn off?**  
+   Should people be able to disable Sapling for a website, hide the panel for
+   one text box, or do both?
+7. **What is the minimum launch version?**  
+   Which features are required for the first usable release: recording edits,
+   undo/redo, branches, timeline, export/import, or something else?
+8. **How should the extension be distributed?**  
+   Is this initially for personal testing, for a small group, or for the
+   Chrome Web Store?
 
 ### Dependencies
 - To be determined
